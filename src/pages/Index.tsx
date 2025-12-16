@@ -165,6 +165,7 @@ const Index = () => {
             onSave={handleSaveTemplate}
             onSaveVariants={handleSaveVariants}
             onImport={() => setImportDialogOpen(true)}
+            onGenerateTestData={handleGenerateTestData}
             reportName={reportMeta.reportName}
             saving={saving}
             templateSaved={templateSaved}
