@@ -123,21 +123,52 @@ export const selectSelectedColumn = createSelector(
   }
 );
 
+const buildSpanMap = (rowOrder: string[], rows: Record<string, Row>, cells: Record<string, Cell>) => {
+  const spanMap: Record<string, { colspan: number; rowspan: number }> = {};
+  
+  for (let rowIndex = 0; rowIndex < rowOrder.length; rowIndex++) {
+    const rowId = rowOrder[rowIndex];
+    const row = rows[rowId];
+    
+    if (row.rowType === "DYNAMIC") continue;
+    
+    for (let cellIndex = 0; cellIndex < row.cellIds.length; cellIndex++) {
+      const cellId = row.cellIds[cellIndex];
+      const cell = cells[cellId];
+      
+      if (!cell) continue;
+      
+      const colspan = cell.render?.colspan || 1;
+      const rowspan = cell.render?.rowspan || 1;
+      
+      if (colspan > 1 || rowspan > 1) {
+        spanMap[`${rowId}-${cellId}`] = { colspan, rowspan };
+      }
+    }
+  }
+  
+  return spanMap;
+};
+
 export const selectHiddenCells = createSelector(
   [selectRowOrder, selectRowsEntities, selectCellsEntities],
   (rowOrder, rows, cells) => {
     const hidden = new Set<string>();
+    const spanMap = buildSpanMap(rowOrder, rows, cells);
     
-    rowOrder.forEach((rowId, rowIndex) => {
+    for (let rowIndex = 0; rowIndex < rowOrder.length; rowIndex++) {
+      const rowId = rowOrder[rowIndex];
       const row = rows[rowId];
-      if (row.rowType === "DYNAMIC") return;
       
-      row.cellIds.forEach((cellId, cellIndex) => {
-        const cell = cells[cellId];
-        if (!cell) return;
+      if (row.rowType === "DYNAMIC") continue;
+      
+      for (let cellIndex = 0; cellIndex < row.cellIds.length; cellIndex++) {
+        const cellId = row.cellIds[cellIndex];
+        const span = spanMap[`${rowId}-${cellId}`];
         
-        const colspan = cell.render?.colspan || 1;
-        const rowspan = cell.render?.rowspan || 1;
+        if (!span) continue;
+        
+        const { colspan, rowspan } = span;
         
         for (let c = 1; c < colspan; c++) {
           const hiddenCellId = row.cellIds[cellIndex + c];
@@ -158,8 +189,8 @@ export const selectHiddenCells = createSelector(
             }
           }
         }
-      });
-    });
+      }
+    }
     
     return hidden;
   }
