@@ -658,80 +658,33 @@ export const LeftPanel = memo(() => {
             </AccordionDetails>
           </Accordion>
 
-        <Accordion expanded={expandedPanels.rows} onChange={() => handleExpand("rows")}>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <ViewAgendaIcon sx={{ mr: 1, fontSize: 20 }} />
-            <Typography variant="body2" fontWeight={500}>Rows ({rows.length})</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-              <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0.5 }}>
-                <Button variant="outlined" size="small" onClick={() => openAddRowDialog("HEADER")}>Header</Button>
-                <Button variant="outlined" size="small" onClick={() => openAddRowDialog("DATA")}>Data</Button>
-                <Button variant="outlined" size="small" onClick={() => openAddRowDialog("SEPARATOR")}>Separator</Button>
-                <Button variant="outlined" size="small" onClick={() => openAddRowDialog("DYNAMIC")}>Dynamic</Button>
-                <Button variant="outlined" size="small" onClick={() => openAddRowDialog("FOOTER")} sx={{ gridColumn: "span 2" }}>Footer</Button>
+          <Accordion expanded={expandedPanels.rows} onChange={() => handleExpand("rows")}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <ViewAgendaIcon sx={{ mr: 1, fontSize: 20 }} />
+              <Typography variant="body2" fontWeight={500}>Rows ({rows.length})</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0.5 }}>
+                  <Button variant="outlined" size="small" onClick={() => openAddRowDialog("HEADER")}>Header</Button>
+                  <Button variant="outlined" size="small" onClick={() => openAddRowDialog("DATA")}>Data</Button>
+                  <Button variant="outlined" size="small" onClick={() => openAddRowDialog("SEPARATOR")}>Separator</Button>
+                  <Button variant="outlined" size="small" onClick={() => openAddRowDialog("DYNAMIC")}>Dynamic</Button>
+                  <Button variant="outlined" size="small" onClick={() => openAddRowDialog("FOOTER")} sx={{ gridColumn: "span 2" }}>Footer</Button>
+                </Box>
+                <VirtualizedRowList
+                  rows={rows}
+                  draggedRowIndex={draggedRowIndex}
+                  dropTargetIndex={dropTargetIndex}
+                  onDragStart={handleDragStart}
+                  onDragOver={handleDragOver}
+                  onDragEnd={handleDragEnd}
+                  onInsertClick={handleInsertClick}
+                  onRemoveRow={handleRemoveRow}
+                />
               </Box>
-              <Box sx={{ bgcolor: "background.paper", borderRadius: 1, mt: 1 }}>
-                {rows.length === 0 ? (
-                  <Box sx={{ p: 2, textAlign: "center", color: "text.secondary" }}>
-                    <Typography variant="caption">No rows added yet</Typography>
-                  </Box>
-                ) : (
-                  <List
-                    height={Math.min(400, rows.length * 56 + 24)}
-                    itemCount={rows.length + 1}
-                    itemSize={56}
-                    width="100%"
-                    style={{ overflow: "auto" }}
-                  >
-                    {({ index, style }) => {
-                      if (index === rows.length) {
-                        return (
-                          <Box
-                            style={style}
-                            onDragOver={(e) => handleDragOver(e, rows.length)}
-                            onDrop={handleDragEnd}
-                            sx={{
-                              height: dropTargetIndex === rows.length ? 24 : 4,
-                              bgcolor: dropTargetIndex === rows.length ? "primary.light" : "transparent",
-                              borderRadius: 1,
-                              transition: "all 0.2s",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                            }}
-                          >
-                            {dropTargetIndex === rows.length && (
-                              <Typography variant="caption" color="primary.contrastText">Drop here</Typography>
-                            )}
-                          </Box>
-                        );
-                      }
-
-                      const row = rows[index];
-                      return (
-                        <div style={style}>
-                          <RowItem
-                            row={row}
-                            index={index}
-                            isDragging={draggedRowIndex === index}
-                            isDropTarget={dropTargetIndex === index}
-                            onDragStart={() => handleDragStart(index)}
-                            onDragOver={(e) => handleDragOver(e, index)}
-                            onDragEnd={handleDragEnd}
-                            onInsertClick={(e) => handleInsertClick(e, index + 1)}
-                            onRemove={() => handleRemoveRow(row.id, index)}
-                          />
-                        </div>
-                      );
-                    }}
-                  </List>
-                )}
-              </Box>
-            </Box>
-          </AccordionDetails>
-        </Accordion>
+            </AccordionDetails>
+          </Accordion>
 
         <Accordion expanded={expandedPanels.variants} onChange={() => handleExpand("variants")}>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
