@@ -216,15 +216,20 @@ export const ReportCanvas = memo(() => {
     }
   }, [dispatch, formulaMode]);
 
-  const rowVirtualizer = useVirtualizer({
-    count: rows.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: useCallback(() => 48, []),
-    overscan: 15,
-    measureElement: typeof window !== "undefined" && navigator.userAgent.indexOf("Firefox") === -1
-      ? (element) => element?.getBoundingClientRect().height ?? 48
-      : undefined,
-  });
+    const rowVirtualizer = useVirtualizer({
+      count: rows.length,
+      getScrollElement: () => parentRef.current,
+      estimateSize: useCallback(() => 60, []),
+      overscan: 20,
+      measureElement: typeof window !== "undefined" && navigator.userAgent.indexOf("Firefox") === -1
+        ? (element) => {
+            const height = element?.getBoundingClientRect().height;
+            return height && height > 0 ? height : 60;
+          }
+        : undefined,
+      scrollMargin: parentRef.current?.offsetTop ?? 0,
+      lanes: 1,
+    });
 
   const virtualRows = rowVirtualizer.getVirtualItems();
   const totalSize = rowVirtualizer.getTotalSize();
