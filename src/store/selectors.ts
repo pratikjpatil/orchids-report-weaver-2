@@ -1,5 +1,6 @@
 import { createSelector } from "@reduxjs/toolkit";
 import { RootState } from "./index";
+import type { Row, Cell } from "./templateSlice";
 
 const selectTemplate = (state: RootState) => state.template;
 
@@ -18,9 +19,46 @@ export const selectColumns = createSelector(
   (template) => template.columns
 );
 
-export const selectRows = createSelector(
+export const selectRowOrder = createSelector(
+  [selectTemplate],
+  (template) => template.rowOrder
+);
+
+export const selectRowsEntities = createSelector(
   [selectTemplate],
   (template) => template.rows
+);
+
+export const selectCellsEntities = createSelector(
+  [selectTemplate],
+  (template) => template.cells
+);
+
+export const selectRows = createSelector(
+  [selectRowOrder, selectRowsEntities, selectCellsEntities],
+  (rowOrder, rows, cells) => {
+    return rowOrder.map(rowId => {
+      const row = rows[rowId];
+      const rowCells = row.cellIds.map(cellId => cells[cellId]);
+      return {
+        ...row,
+        cells: rowCells,
+      };
+    });
+  }
+);
+
+export const selectRowById = createSelector(
+  [selectRowsEntities, selectCellsEntities, (_: RootState, rowId: string) => rowId],
+  (rows, cells, rowId) => {
+    const row = rows[rowId];
+    if (!row) return null;
+    const rowCells = row.cellIds.map(cellId => cells[cellId]);
+    return {
+      ...row,
+      cells: rowCells,
+    };
+  }
 );
 
 export const selectVariants = createSelector(
@@ -49,8 +87,8 @@ export const selectTemplateSaved = createSelector(
 );
 
 export const selectRowCount = createSelector(
-  [selectRows],
-  (rows) => rows.length
+  [selectRowOrder],
+  (rowOrder) => rowOrder.length
 );
 
 export const selectColumnCount = createSelector(
@@ -58,92 +96,107 @@ export const selectColumnCount = createSelector(
   (columns) => columns.length
 );
 
-export const selectRowById = createSelector(
-  [selectRows, (_: RootState, rowIndex: number) => rowIndex],
-  (rows, rowIndex) => rows[rowIndex]
-);
-
-export const selectColumnById = createSelector(
-  [selectColumns, (_: RootState, colIndex: number) => colIndex],
-  (columns, colIndex) => columns[colIndex]
-);
-
-export const selectCellByPosition = createSelector(
-  [
-    selectRows,
-    (_: RootState, rowIndex: number) => rowIndex,
-    (_: RootState, __: number, cellIndex: number) => cellIndex,
-  ],
-  (rows, rowIndex, cellIndex) => rows[rowIndex]?.cells?.[cellIndex]
+export const selectCellById = createSelector(
+  [selectCellsEntities, (_: RootState, cellId: string) => cellId],
+  (cells, cellId) => cells[cellId]
 );
 
 export const selectSelectedRow = createSelector(
-  [selectRows, selectSelectedCell],
-  (rows, selectedCell) => selectedCell ? rows[selectedCell.rowIndex] : null
+  [selectRowsEntities, selectSelectedCell],
+  (rows, selectedCell) => selectedCell ? rows[selectedCell.rowId] : null
 );
 
 export const selectSelectedCellData = createSelector(
-  [selectSelectedRow, selectSelectedCell],
-  (row, selectedCell) => {
-    if (!row || !selectedCell || selectedCell.cellIndex < 0) return null;
-    return row.cells?.[selectedCell.cellIndex] || null;
+  [selectCellsEntities, selectSelectedCell],
+  (cells, selectedCell) => {
+    if (!selectedCell) return null;
+    return cells[selectedCell.cellId] || null;
   }
 );
 
 export const selectSelectedColumn = createSelector(
-  [selectColumns, selectSelectedCell],
-  (columns, selectedCell) => selectedCell ? columns[selectedCell.cellIndex] : null
+  [selectColumns, selectSelectedRow, selectCellsEntities, selectSelectedCell],
+  (columns, row, cells, selectedCell) => {
+    if (!row || !selectedCell) return null;
+    const cellIndex = row.cellIds.indexOf(selectedCell.cellId);
+    return cellIndex >= 0 ? columns[cellIndex] : null;
+  }
 );
 
 export const selectHiddenCells = createSelector(
-  [selectRows],
-  (rows) => {
+  [selectRowOrder, selectRowsEntities, selectCellsEntities],
+  (rowOrder, rows, cells) => {
     const hidden = new Set<string>();
-    rows.forEach((row, rowIndex) => {
+    
+    rowOrder.forEach((rowId, rowIndex) => {
+      const row = rows[rowId];
       if (row.rowType === "DYNAMIC") return;
-      row.cells?.forEach((cell, cellIndex) => {
+      
+      row.cellIds.forEach((cellId, cellIndex) => {
+        const cell = cells[cellId];
+        if (!cell) return;
+        
         const colspan = cell.render?.colspan || 1;
         const rowspan = cell.render?.rowspan || 1;
+        
         for (let c = 1; c < colspan; c++) {
-          hidden.add(`${rowIndex}-${cellIndex + c}`);
+          const hiddenCellId = row.cellIds[cellIndex + c];
+          if (hiddenCellId) {
+            hidden.add(`${rowId}-${hiddenCellId}`);
+          }
         }
+        
         for (let r = 1; r < rowspan; r++) {
+          const targetRowId = rowOrder[rowIndex + r];
+          if (!targetRowId) continue;
+          
+          const targetRow = rows[targetRowId];
           for (let c = 0; c < colspan; c++) {
-            hidden.add(`${rowIndex + r}-${cellIndex + c}`);
+            const hiddenCellId = targetRow.cellIds[cellIndex + c];
+            if (hiddenCellId) {
+              hidden.add(`${targetRowId}-${hiddenCellId}`);
+            }
           }
         }
       });
     });
+    
     return hidden;
   }
 );
 
 export const selectTableNames = createSelector(
-  [selectRows],
-  (rows) => {
+  [selectRowsEntities, selectCellsEntities],
+  (rows, cells) => {
     const tables = new Set<string>();
-    rows.forEach((row) => {
-      row.cells?.forEach((cell) => {
-        if (cell.source?.table) {
+    
+    Object.values(rows).forEach((row) => {
+      row.cellIds.forEach((cellId) => {
+        const cell = cells[cellId];
+        if (cell?.source?.table) {
           tables.add(cell.source.table);
         }
       });
+      
       if (row.dynamicConfig?.table) {
         tables.add(row.dynamicConfig.table);
       }
     });
+    
     return Array.from(tables);
   }
 );
 
 export const selectDynamicRowIds = createSelector(
-  [selectRows],
-  (rows) => rows.filter((row) => row.rowType === "DYNAMIC").map((row) => row.id)
+  [selectRowsEntities],
+  (rows) => Object.values(rows)
+    .filter((row) => row.rowType === "DYNAMIC")
+    .map((row) => row.id)
 );
 
 export const selectExistingRowIds = createSelector(
-  [selectRows],
-  (rows) => rows.map((row) => row.id)
+  [selectRowOrder],
+  (rowOrder) => rowOrder
 );
 
 export const selectTemplateForExport = createSelector(
@@ -159,4 +212,14 @@ export const selectTemplateForExport = createSelector(
 export const selectTemplateColumns = createSelector(
   [selectColumns],
   (columns) => columns.map((col) => ({ id: col.id, name: col.name }))
+);
+
+export const selectRowHeights = createSelector(
+  [selectTemplate],
+  (template) => template.rowHeights
+);
+
+export const selectRowHeight = createSelector(
+  [selectRowsEntities, (_: RootState, rowId: string) => rowId],
+  (rows, rowId) => rows[rowId]?.height || 60
 );
