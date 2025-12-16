@@ -214,13 +214,13 @@ const templateSlice = createSlice({
       state.reportMeta = { ...state.reportMeta, ...action.payload };
     },
 
-    addColumn: (state) => {
-      const newColumn: Column = {
-        id: `C__${state.columns.length + 1}`,
-        name: `Column ${state.columns.length + 1}`,
-        format: { width: 150 },
-      };
-      state.columns.push(newColumn);
+      addColumn: (state) => {
+        const newColumn: Column = {
+          id: `C__${state.columns.length + 1}`,
+          name: `Column ${state.columns.length + 1}`,
+          format: { width: 150, relativeWidth: DEFAULT_RELATIVE_WIDTH },
+        };
+        state.columns.push(newColumn);
       
       state.rowOrder.forEach((rowId) => {
         const row = state.rows[rowId];
