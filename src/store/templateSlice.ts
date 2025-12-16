@@ -59,6 +59,7 @@ export interface Row {
 
 export interface ColumnFormat {
   width?: number;
+  relativeWidth?: number;
   type?: "none" | "currency" | "number" | "date" | "percentage";
   currencySymbol?: string;
   decimals?: number;
@@ -69,6 +70,7 @@ export interface ColumnFormat {
 }
 
 export const PDF_WIDTH_MULTIPLIER = 0.75;
+export const DEFAULT_RELATIVE_WIDTH = 1;
 
 export interface Column {
   id: string;
