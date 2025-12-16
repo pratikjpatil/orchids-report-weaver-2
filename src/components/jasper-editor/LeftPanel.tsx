@@ -547,10 +547,9 @@ export const LeftPanel = memo(() => {
 
   const handleAddRow = useCallback((rowId: string) => {
     const { rowType, insertAt } = addRowDialogState;
-    const newRow: Row = {
-      rowType: rowType as Row["rowType"],
+    const newRow: any = {
+      rowType: rowType as any,
       id: rowId,
-      cells: columns.map(() => ({ type: "TEXT", value: "" })),
     };
 
     if (rowType === "DYNAMIC") {
@@ -561,12 +560,11 @@ export const LeftPanel = memo(() => {
         filters: {},
         columnMappings: [],
       };
-      newRow.cells = [];
     }
 
     dispatch(addRow({ row: newRow, insertAt }));
     setAddRowDialogState({ open: false, rowType: "" });
-  }, [dispatch, addRowDialogState, columns]);
+  }, [dispatch, addRowDialogState]);
 
   const handleDragStart = useCallback((index: number) => {
     setDraggedRowIndex(index);
