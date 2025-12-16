@@ -51,11 +51,54 @@ export const RightPanel = memo(() => {
 
   const [cellTypeWarning, setCellTypeWarning] = useState<string | null>(null);
 
-  const row = selectedCell ? rows[selectedCell.rowIndex] : null;
-  const cell = row?.cells?.[selectedCell?.cellIndex ?? -1];
-  const column = selectedCell ? columns[selectedCell.cellIndex] : null;
+    const row = selectedCell ? rows[selectedCell.rowIndex] : null;
+    const cell = row?.cells?.[selectedCell?.cellIndex ?? -1];
+    const column = selectedCell ? columns[selectedCell.cellIndex] : null;
 
-  const handleUpdateCell = useCallback((field: string, value: any) => {
+    const handleUpdateCellDebounced = useCallback((field: string, value: any) => {
+      if (!selectedCell) return;
+      
+      if (field.startsWith("render.")) {
+        const renderField = field.replace("render.", "");
+        dispatch(updateCellRender({
+          rowIndex: selectedCell.rowIndex,
+          cellIndex: selectedCell.cellIndex,
+          render: { [renderField]: value },
+        }));
+      } else if (field.startsWith("format.")) {
+        const formatField = field.replace("format.", "");
+        dispatch(updateCellFormat({
+          rowIndex: selectedCell.rowIndex,
+          cellIndex: selectedCell.cellIndex,
+          format: { [formatField]: value },
+        }));
+      } else if (field.startsWith("source.")) {
+        const sourceField = field.replace("source.", "");
+        dispatch(updateCellSource({
+          rowIndex: selectedCell.rowIndex,
+          cellIndex: selectedCell.cellIndex,
+          source: { [sourceField]: value },
+        }));
+      } else {
+        dispatch(updateCell({
+          rowIndex: selectedCell.rowIndex,
+          cellIndex: selectedCell.cellIndex,
+          cell: { [field]: value },
+        }));
+      }
+    }, [dispatch, selectedCell]);
+
+    const [debouncedTextValue, setDebouncedTextValue] = useDebouncedInput(
+      cell?.value || "",
+      useCallback((value) => handleUpdateCellDebounced("value", value), [handleUpdateCellDebounced]),
+      150
+    );
+
+    useEffect(() => {
+      setDebouncedTextValue(cell?.value || "");
+    }, [cell?.value, selectedCell, setDebouncedTextValue]);
+
+    const handleUpdateCell = useCallback((field: string, value: any) => {
     if (!selectedCell) return;
     
     if (field.startsWith("render.")) {
