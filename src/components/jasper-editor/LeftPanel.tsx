@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useCallback, memo, useMemo } from "react";
+import { useState, useCallback, memo, useRef } from "react";
+import type React from "react";
 import { useDebouncedInput } from "@/hooks/useDebouncedInput";
-import { FixedSizeList as List } from "react-window";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
