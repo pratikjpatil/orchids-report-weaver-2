@@ -11,6 +11,7 @@ import { ConfigProvider } from "@/contexts/ConfigContext";
 import { useToast } from "@/hooks/use-toast";
 import { saveTemplate, saveVariants } from "@/services/api";
 import { useAppDispatch, useAppSelector } from "@/store";
+import { generateBulkTestData } from "@/utils/testDataGenerator";
 import {
   setTemplate,
   setTemplateMeta,
@@ -133,6 +134,17 @@ const Index = () => {
     toast({
       title: "Template imported",
       description: "Template loaded successfully",
+    });
+  }, [dispatch, toast]);
+
+  const handleGenerateTestData = useCallback((rowCount: number) => {
+    const testData = generateBulkTestData(rowCount);
+    dispatch(setTemplate(testData));
+    dispatch(setSelectedCell(null));
+    dispatch(setTemplateSaved(false));
+    toast({
+      title: "Test data generated",
+      description: `Successfully generated ${rowCount} rows for performance testing`,
     });
   }, [dispatch, toast]);
 
