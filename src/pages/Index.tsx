@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback } from "react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import Box from "@mui/material/Box";
@@ -10,6 +10,23 @@ import { ImportTemplateDialog } from "@/components/jasper-editor/ImportTemplateD
 import { ConfigProvider } from "@/contexts/ConfigContext";
 import { useToast } from "@/hooks/use-toast";
 import { saveTemplate, saveVariants } from "@/services/api";
+import { useAppDispatch, useAppSelector } from "@/store";
+import {
+  setTemplate,
+  setTemplateMeta,
+  setSelectedCell,
+  setSaving,
+  setTemplateSaved,
+} from "@/store/templateSlice";
+import {
+  selectTemplateMeta,
+  selectReportMeta,
+  selectVariants,
+  selectSaving,
+  selectTemplateSaved,
+  selectTemplateForExport,
+} from "@/store/selectors";
+import { useState } from "react";
 
 const theme = createTheme({
   palette: {
@@ -27,73 +44,46 @@ const theme = createTheme({
 
 const Index = () => {
   const { toast } = useToast();
-  const [template, setTemplate] = useState<any>({
-    templateMeta: {
-      templateId: "",
-      version: 1,
-      pageSize: "A4",
-      pageOrientation: "portrait",
-    },
-    reportMeta: {
-      reportName: "",
-      reportId: "",
-      extras: [
-        { name: "Report Date", value: new Date().toISOString().split("T")[0] },
-      ],
-    },
-    reportData: { columns: [], rows: [] },
-    variants: [],
-  });
+  const dispatch = useAppDispatch();
+  
+  const templateMeta = useAppSelector(selectTemplateMeta);
+  const reportMeta = useAppSelector(selectReportMeta);
+  const variants = useAppSelector(selectVariants);
+  const saving = useAppSelector(selectSaving);
+  const templateSaved = useAppSelector(selectTemplateSaved);
+  const templateForExport = useAppSelector(selectTemplateForExport);
 
-  const [selectedCell, setSelectedCell] = useState<{
-    rowIndex: number;
-    cellIndex: number;
-  } | null>(null);
-  const [formulaMode, setFormulaMode] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [templateSaved, setTemplateSaved] = useState(false);
-  const [saving, setSaving] = useState(false);
 
-  const handleExportJSON = () => {
-    const exportData = { template, variants: template.variants || [] };
+  const handleExportJSON = useCallback(() => {
+    const exportData = { template: templateForExport, variants };
     const blob = new Blob([JSON.stringify(exportData, null, 2)], {
       type: "application/json",
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${template.reportMeta?.reportName || "report"}-template.json`;
+    a.download = `${reportMeta.reportName || "report"}-template.json`;
     a.click();
     URL.revokeObjectURL(url);
     toast({
       title: "Template exported",
       description: "Your template has been downloaded as JSON",
     });
-  };
+  }, [templateForExport, variants, reportMeta.reportName, toast]);
 
-  const handleSaveTemplate = async () => {
-    setSaving(true);
-    const payload = {
-      template: {
-        templateMeta: template.templateMeta,
-        reportMeta: template.reportMeta,
-        reportData: template.reportData,
-      },
-      variants: template.variants,
-    };
-    const result = await saveTemplate(payload);
-    setSaving(false);
+  const handleSaveTemplate = useCallback(async () => {
+    dispatch(setSaving(true));
+    const result = await saveTemplate({
+      template: templateForExport,
+      variants,
+    });
+    dispatch(setSaving(false));
 
     if (result.success) {
-      setTemplateSaved(true);
+      dispatch(setTemplateSaved(true));
       if (result.templateId) {
-        setTemplate({
-          ...template,
-          templateMeta: {
-            ...template.templateMeta,
-            templateId: result.templateId,
-          },
-        });
+        dispatch(setTemplateMeta({ templateId: result.templateId }));
       }
       toast({
         title: "Template saved",
@@ -106,10 +96,10 @@ const Index = () => {
         variant: "destructive",
       });
     }
-  };
+  }, [dispatch, templateForExport, variants, toast]);
 
-  const handleSaveVariants = async () => {
-    if (!templateSaved && !template.templateMeta.templateId) {
+  const handleSaveVariants = useCallback(async () => {
+    if (!templateSaved && !templateMeta.templateId) {
       toast({
         title: "Save template first",
         description: "Please save the template before saving variants",
@@ -118,12 +108,9 @@ const Index = () => {
       return;
     }
 
-    setSaving(true);
-    const result = await saveVariants(
-      template.templateMeta.templateId,
-      template.variants || []
-    );
-    setSaving(false);
+    dispatch(setSaving(true));
+    const result = await saveVariants(templateMeta.templateId, variants);
+    dispatch(setSaving(false));
 
     if (result.success) {
       toast({
@@ -137,22 +124,17 @@ const Index = () => {
         variant: "destructive",
       });
     }
-  };
+  }, [dispatch, templateSaved, templateMeta.templateId, variants, toast]);
 
-  const handleImport = (data: { template: any; variants: any[] }) => {
-    setTemplate({ ...data.template, variants: data.variants || [] });
-    setSelectedCell(null);
-    setTemplateSaved(false);
+  const handleImport = useCallback((data: { template: any; variants: any[] }) => {
+    dispatch(setTemplate({ ...data.template, variants: data.variants || [] }));
+    dispatch(setSelectedCell(null));
+    dispatch(setTemplateSaved(false));
     toast({
       title: "Template imported",
       description: "Template loaded successfully",
     });
-  };
-
-  // Update selected cell when rows are reordered
-  const handleTemplateChange = (newTemplate: any) => {
-    setTemplate(newTemplate);
-  };
+  }, [dispatch, toast]);
 
   return (
     <ConfigProvider>
@@ -171,33 +153,16 @@ const Index = () => {
             onSave={handleSaveTemplate}
             onSaveVariants={handleSaveVariants}
             onImport={() => setImportDialogOpen(true)}
-            reportName={template.reportMeta.reportName}
+            reportName={reportMeta.reportName}
             saving={saving}
             templateSaved={templateSaved}
-            variantsCount={template.variants?.length || 0}
+            variantsCount={variants.length}
           />
 
           <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
-            <LeftPanel
-              template={template}
-              onTemplateChange={handleTemplateChange}
-            />
-
-            <ReportCanvas
-              template={template}
-              onTemplateChange={handleTemplateChange}
-              selectedCell={selectedCell}
-              onCellSelect={setSelectedCell}
-              formulaMode={formulaMode}
-            />
-
-            <RightPanel
-              template={template}
-              onTemplateChange={handleTemplateChange}
-              selectedCell={selectedCell}
-              formulaMode={formulaMode}
-              onFormulaModeChange={setFormulaMode}
-            />
+            <LeftPanel />
+            <ReportCanvas />
+            <RightPanel />
           </Box>
         </Box>
 
