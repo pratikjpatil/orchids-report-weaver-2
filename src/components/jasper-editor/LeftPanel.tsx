@@ -363,10 +363,18 @@ export const LeftPanel = memo(() => {
   const dynamicRowIds = useAppSelector(selectDynamicRowIds);
   const existingRowIds = useAppSelector(selectExistingRowIds);
 
-  const [expanded, setExpanded] = useState<string>("metadata");
+  const [expandedPanels, setExpandedPanels] = useState<Record<string, boolean>>({
+    metadata: true,
+    columns: false,
+    rows: false,
+    variants: false,
+  });
   
   const handleExpand = useCallback((panel: string) => {
-    setExpanded(prev => prev === panel ? "" : panel);
+    setExpandedPanels(prev => ({
+      ...prev,
+      [panel]: !prev[panel]
+    }));
   }, []);
   const [deleteDialog, setDeleteDialog] = useState<{
     type: "row" | "column";
