@@ -475,15 +475,25 @@ export const RightPanel = memo(() => {
             />
           )}
 
-          <TextField
-            label="Background Color"
-            size="small"
-            type="color"
-            value={cell.format?.bgColor || "#ffffff"}
-            onChange={(e) => handleUpdateCell("format.bgColor", e.target.value)}
-            fullWidth
-            InputProps={{ sx: { height: 40 } }}
-          />
+            <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+              <TextField
+                label="Background Color"
+                size="small"
+                type="color"
+                value={cell.format?.bgColor || "#ffffff"}
+                onChange={(e) => handleUpdateCell("format.bgColor", e.target.value)}
+                fullWidth
+                InputProps={{ sx: { height: 40 } }}
+              />
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => handleUpdateCell("format.bgColor", "#ffffff")}
+                sx={{ minWidth: 60, height: 40 }}
+              >
+                Reset
+              </Button>
+            </Box>
 
           <Divider />
 
