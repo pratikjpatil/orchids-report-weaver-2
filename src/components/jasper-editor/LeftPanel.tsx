@@ -2,6 +2,7 @@
 
 import { useState, useCallback, memo, useMemo } from "react";
 import { useDebouncedInput } from "@/hooks/useDebouncedInput";
+import { FixedSizeList as List } from "react-window";
 import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
@@ -11,7 +12,7 @@ import AccordionDetails from "@mui/material/AccordionDetails";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
-import List from "@mui/material/List";
+import MuiList from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
 import MenuItem from "@mui/material/MenuItem";
