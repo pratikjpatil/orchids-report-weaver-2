@@ -219,16 +219,8 @@ export const ReportCanvas = memo(() => {
     const rowVirtualizer = useVirtualizer({
       count: rows.length,
       getScrollElement: () => parentRef.current,
-      estimateSize: useCallback(() => 60, []),
-      overscan: 20,
-      measureElement: typeof window !== "undefined" && navigator.userAgent.indexOf("Firefox") === -1
-        ? (element) => {
-            const height = element?.getBoundingClientRect().height;
-            return height && height > 0 ? height : 60;
-          }
-        : undefined,
-      scrollMargin: parentRef.current?.offsetTop ?? 0,
-      lanes: 1,
+      estimateSize: () => 60,
+      overscan: 50,
     });
 
   const virtualRows = rowVirtualizer.getVirtualItems();
@@ -334,22 +326,22 @@ export const ReportCanvas = memo(() => {
                     {paddingTop > 0 && (
                       <tr><td style={{ height: paddingTop }} /></tr>
                     )}
-                    {virtualRows.map((virtualRow) => {
-                      const row = rows[virtualRow.index];
-                      return (
-                        <RowContent
-                          key={row.id}
-                          row={row}
-                          rowIndex={virtualRow.index}
-                          columns={columns}
-                          selectedCell={selectedCell}
-                          formulaMode={formulaMode}
-                          hiddenCells={hiddenCells}
-                          onCellClick={handleCellClick}
-                          onDynamicRowClick={handleDynamicRowClick}
-                        />
-                      );
-                    })}
+                      {virtualRows.map((virtualRow) => {
+                        const row = rows[virtualRow.index];
+                        return (
+                          <RowContent
+                            key={row.id}
+                            row={row}
+                            rowIndex={virtualRow.index}
+                            columns={columns}
+                            selectedCell={selectedCell}
+                            formulaMode={formulaMode}
+                            hiddenCells={hiddenCells}
+                            onCellClick={handleCellClick}
+                            onDynamicRowClick={handleDynamicRowClick}
+                          />
+                        );
+                      })}
                     {paddingBottom > 0 && (
                       <tr><td style={{ height: paddingBottom }} /></tr>
                     )}

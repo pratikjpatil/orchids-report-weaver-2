@@ -30,6 +30,7 @@ export const TopToolbar = ({
   onSave,
   onSaveVariants,
   onImport,
+  onGenerateTestData,
   reportName,
   saving = false,
   templateSaved = false,
@@ -47,6 +48,18 @@ export const TopToolbar = ({
         </Typography>
 
         <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+          {onGenerateTestData && (
+            <Button
+              variant="outlined"
+              color="warning"
+              startIcon={<SpeedIcon />}
+              onClick={() => onGenerateTestData(10000)}
+              size="small"
+              title="Generate 10000 rows for performance testing"
+            >
+              10K Test
+            </Button>
+          )}
           <Button
             variant="outlined"
             startIcon={<UploadIcon />}
