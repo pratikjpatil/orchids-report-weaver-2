@@ -68,6 +68,8 @@ export interface ColumnFormat {
   boldCondition?: string;
 }
 
+export const PDF_WIDTH_MULTIPLIER = 0.75;
+
 export interface Column {
   id: string;
   name: string;
