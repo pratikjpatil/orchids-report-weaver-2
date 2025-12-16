@@ -557,10 +557,10 @@ export const LeftPanel = memo(() => {
           REPORT STRUCTURE
         </Typography>
 
-        <Accordion expanded={expanded === "metadata"} onChange={() => setExpanded(expanded === "metadata" ? "" : "metadata")}>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="body2" fontWeight={500}>Metadata</Typography>
-          </AccordionSummary>
+          <Accordion expanded={expanded === "metadata"} onChange={() => handleExpand("metadata")}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Typography variant="body2" fontWeight={500}>Metadata</Typography>
+            </AccordionSummary>
           <AccordionDetails>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <TextField
@@ -622,11 +622,11 @@ export const LeftPanel = memo(() => {
           </AccordionDetails>
         </Accordion>
 
-        <Accordion expanded={expanded === "columns"} onChange={() => setExpanded(expanded === "columns" ? "" : "columns")}>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <ViewColumnIcon sx={{ mr: 1, fontSize: 20 }} />
-            <Typography variant="body2" fontWeight={500}>Columns ({columns.length})</Typography>
-          </AccordionSummary>
+          <Accordion expanded={expanded === "columns"} onChange={() => handleExpand("columns")}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <ViewColumnIcon sx={{ mr: 1, fontSize: 20 }} />
+              <Typography variant="body2" fontWeight={500}>Columns ({columns.length})</Typography>
+            </AccordionSummary>
           <AccordionDetails>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
               <Button variant="outlined" size="small" startIcon={<AddIcon />} onClick={handleAddColumn} fullWidth>
@@ -649,11 +649,11 @@ export const LeftPanel = memo(() => {
           </AccordionDetails>
         </Accordion>
 
-        <Accordion expanded={expanded === "rows"} onChange={() => setExpanded(expanded === "rows" ? "" : "rows")}>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <ViewAgendaIcon sx={{ mr: 1, fontSize: 20 }} />
-            <Typography variant="body2" fontWeight={500}>Rows ({rows.length})</Typography>
-          </AccordionSummary>
+          <Accordion expanded={expanded === "rows"} onChange={() => handleExpand("rows")}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <ViewAgendaIcon sx={{ mr: 1, fontSize: 20 }} />
+              <Typography variant="body2" fontWeight={500}>Rows ({rows.length})</Typography>
+            </AccordionSummary>
           <AccordionDetails>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
               <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0.5 }}>
@@ -700,11 +700,11 @@ export const LeftPanel = memo(() => {
           </AccordionDetails>
         </Accordion>
 
-        <Accordion expanded={expanded === "variants"} onChange={() => setExpanded(expanded === "variants" ? "" : "variants")}>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <TuneIcon sx={{ mr: 1, fontSize: 20 }} />
-            <Typography variant="body2" fontWeight={500}>Variants ({variants.length})</Typography>
-          </AccordionSummary>
+          <Accordion expanded={expanded === "variants"} onChange={() => handleExpand("variants")}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <TuneIcon sx={{ mr: 1, fontSize: 20 }} />
+              <Typography variant="body2" fontWeight={500}>Variants ({variants.length})</Typography>
+            </AccordionSummary>
           <AccordionDetails>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
               <Button variant="outlined" size="small" startIcon={<AddIcon />} onClick={openAddVariantDialog} fullWidth>
