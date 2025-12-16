@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import Box from "@mui/material/Box";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
@@ -27,7 +27,7 @@ interface DynamicRowConfigProps {
   onConfigChange: (config: any) => void;
 }
 
-export const DynamicRowConfig = ({
+export const DynamicRowConfig = memo(({
   dynamicConfig,
   templateColumns,
   onConfigChange,
@@ -40,13 +40,13 @@ export const DynamicRowConfig = ({
     setSelectedTableValue(dynamicConfig.table || null);
   }, [dynamicConfig.table]);
 
-  const updateConfig = (updates: Record<string, any>) => {
+  const updateConfig = useCallback((updates: Record<string, any>) => {
     onConfigChange({ ...dynamicConfig, ...updates });
-  };
+  }, [dynamicConfig, onConfigChange]);
 
   const selectableColumns = selectedTableValue ? getSelectableColumns(selectedTableValue) : [];
 
-  const getColumnMappings = (): ColumnMapping[] => {
+  const getColumnMappings = useCallback((): ColumnMapping[] => {
     if (dynamicConfig.columnMappings && Array.isArray(dynamicConfig.columnMappings)) {
       const existingMappings = dynamicConfig.columnMappings as ColumnMapping[];
       const existingIds = existingMappings.map(m => m.templateColumnId);
@@ -61,11 +61,11 @@ export const DynamicRowConfig = ({
       return newMappings;
     }
     return templateColumns.map(col => ({ templateColumnId: col.id, dbColumn: "" }));
-  };
+  }, [dynamicConfig.columnMappings, templateColumns]);
 
   const columnMappings = getColumnMappings();
 
-  const handleTableChange = (newTableName: string | null) => {
+  const handleTableChange = useCallback((newTableName: string | null) => {
     setSelectedTableValue(newTableName);
     
     const resetMappings = templateColumns.map(col => ({ 
@@ -78,9 +78,9 @@ export const DynamicRowConfig = ({
       columnMappings: resetMappings,
       select: [],
     });
-  };
+  }, [templateColumns, updateConfig]);
 
-  const handleColumnMappingChange = (templateColumnId: string, dbColumn: string | null) => {
+  const handleColumnMappingChange = useCallback((templateColumnId: string, dbColumn: string | null) => {
     const newMappings = columnMappings.map(mapping =>
       mapping.templateColumnId === templateColumnId
         ? { ...mapping, dbColumn: dbColumn || "" }
@@ -95,12 +95,12 @@ export const DynamicRowConfig = ({
       columnMappings: newMappings,
       select: selectedDbColumns,
     });
-  };
+  }, [columnMappings, updateConfig]);
 
-  const getDbColumnForTemplate = (templateColumnId: string): string => {
+  const getDbColumnForTemplate = useCallback((templateColumnId: string): string => {
     const mapping = columnMappings.find(m => m.templateColumnId === templateColumnId);
     return mapping?.dbColumn || "";
-  };
+  }, [columnMappings]);
 
   const mappedColumnsCount = columnMappings.filter(m => m.dbColumn).length;
   const hasValidationError = selectedTableValue && templateColumns.length > 0 && mappedColumnsCount === 0;
@@ -147,7 +147,6 @@ export const DynamicRowConfig = ({
 
       {selectedTableValue && (
         <>
-          {/* Collapsible Column Mappings */}
           <Accordion 
             expanded={mappingsExpanded} 
             onChange={() => setMappingsExpanded(!mappingsExpanded)}
@@ -266,4 +265,6 @@ export const DynamicRowConfig = ({
       </Box>
     </Box>
   );
-};
+});
+
+DynamicRowConfig.displayName = "DynamicRowConfig";
