@@ -11,11 +11,13 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
 import Chip from "@mui/material/Chip";
-import { useVirtualizer } from "@tanstack/react-virtual";
+import { VariableSizeList as List } from "react-window";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { setSelectedCell } from "@/store/templateSlice";
 import {
-  selectRows,
+  selectRowOrder,
+  selectRowsEntities,
+  selectCellsEntities,
   selectColumns,
   selectSelectedCell,
   selectFormulaMode,
@@ -42,32 +44,130 @@ const getCellValue = (cell: Cell) => {
   return "Empty cell";
 };
 
-interface RowContentProps {
+interface CellComponentProps {
+  cell: Cell;
+  cellId: string;
+  rowId: string;
   row: Row;
-  rowIndex: number;
-  columns: Column[];
-  selectedCell: { rowIndex: number; cellIndex: number } | null;
+  colId: string;
+  isSelected: boolean;
   formulaMode: boolean;
-  hiddenCells: Set<string>;
-  onCellClick: (rowIndex: number, cellIndex: number, rowId: string, colId: string, row: Row, event: React.MouseEvent) => void;
-  onDynamicRowClick: (rowIndex: number) => void;
+  column: Column;
+  isHidden: boolean;
+  onCellClick: (rowId: string, cellId: string, colId: string, row: Row, event: React.MouseEvent) => void;
 }
 
-const RowContent = memo(({
+const CellComponent = memo(({
+  cell,
+  cellId,
+  rowId,
   row,
-  rowIndex,
-  columns,
-  selectedCell,
+  colId,
+  isSelected,
   formulaMode,
-  hiddenCells,
+  column,
+  isHidden,
   onCellClick,
-  onDynamicRowClick,
-}: RowContentProps) => {
+}: CellComponentProps) => {
+  if (isHidden) return null;
+
+  const colspan = cell.render?.colspan || 1;
+  const rowspan = cell.render?.rowspan || 1;
+
+  return (
+    <TableCell
+      onClick={(e) => onCellClick(rowId, cellId, colId, row, e)}
+      colSpan={colspan}
+      rowSpan={rowspan}
+      sx={{
+        cursor: formulaMode ? "crosshair" : "pointer",
+        position: "relative",
+        bgcolor: cell.format?.bgColor && cell.format.bgColor !== "#ffffff" 
+          ? cell.format.bgColor 
+          : isSelected 
+            ? "#e3f2fd" 
+            : formulaMode 
+              ? "#fff9c4" 
+              : "white",
+        border: isSelected ? "2px solid #1976d2" : "1px solid #e0e0e0",
+        fontWeight: cell.render?.bold ? 600 : 400,
+        textAlign: cell.render?.align || column?.format?.align || "left",
+        width: column?.format?.width || 150,
+        minWidth: column?.format?.width || 150,
+        p: 1,
+        "&:hover": {
+          bgcolor: isSelected ? "#e3f2fd" : formulaMode ? "#fff59d" : "#f5f5f5",
+        },
+        transition: "all 0.15s ease",
+      }}
+    >
+      <Typography variant="body2" sx={{ fontSize: "0.8rem" }}>
+        {getCellValue(cell)}
+      </Typography>
+      {colspan > 1 && (
+        <Chip
+          label={`cs:${colspan}`}
+          size="small"
+          sx={{ position: "absolute", top: 2, right: 2, height: 16, fontSize: "0.6rem" }}
+        />
+      )}
+      {rowspan > 1 && (
+        <Chip
+          label={`rs:${rowspan}`}
+          size="small"
+          color="secondary"
+          sx={{ position: "absolute", top: colspan > 1 ? 20 : 2, right: 2, height: 16, fontSize: "0.6rem" }}
+        />
+      )}
+    </TableCell>
+  );
+});
+
+CellComponent.displayName = "CellComponent";
+
+interface RowContentProps {
+  index: number;
+  style: React.CSSProperties;
+  data: {
+    rowOrder: string[];
+    rows: Record<string, Row>;
+    cells: Record<string, Cell>;
+    columns: Column[];
+    selectedCell: { rowId: string; cellId: string } | null;
+    formulaMode: boolean;
+    hiddenCells: Set<string>;
+    onCellClick: (rowId: string, cellId: string, colId: string, row: Row, event: React.MouseEvent) => void;
+    onDynamicRowClick: (rowId: string) => void;
+  };
+}
+
+const RowContent = memo(({ index, style, data }: RowContentProps) => {
+  const {
+    rowOrder,
+    rows,
+    cells,
+    columns,
+    selectedCell,
+    formulaMode,
+    hiddenCells,
+    onCellClick,
+    onDynamicRowClick,
+  } = data;
+
+  const rowId = rowOrder[index];
+  const row = rows[rowId];
+
+  if (!row) return null;
+
   return (
     <TableRow
+      style={style}
       sx={{
         "&:hover": { bgcolor: "#f9f9f9" },
         borderLeft: `3px solid ${getRowTypeColor(row.rowType)}`,
+        display: "table",
+        width: "100%",
+        tableLayout: "fixed",
       }}
     >
       <TableCell
@@ -100,13 +200,13 @@ const RowContent = memo(({
       {row.rowType === "DYNAMIC" ? (
         <TableCell
           colSpan={columns.length}
-          onClick={() => onDynamicRowClick(rowIndex)}
+          onClick={() => onDynamicRowClick(rowId)}
           sx={{
-            bgcolor: selectedCell?.rowIndex === rowIndex ? "#c8e6c9" : "#e8f5e9",
+            bgcolor: selectedCell?.rowId === rowId ? "#c8e6c9" : "#e8f5e9",
             fontStyle: "italic",
             color: "text.secondary",
             cursor: formulaMode ? "not-allowed" : "pointer",
-            border: selectedCell?.rowIndex === rowIndex ? "2px solid #388e3c" : "1px solid #e0e0e0",
+            border: selectedCell?.rowId === rowId ? "2px solid #388e3c" : "1px solid #e0e0e0",
             opacity: formulaMode ? 0.6 : 1,
             "&:hover": { bgcolor: formulaMode ? "#e8f5e9" : "#c8e6c9" },
           }}
@@ -117,61 +217,28 @@ const RowContent = memo(({
           )}
         </TableCell>
       ) : (
-        row.cells?.map((cell, cellIndex) => {
-          if (hiddenCells.has(`${rowIndex}-${cellIndex}`)) return null;
+        row.cellIds?.map((cellId, cellIndex) => {
+          const cell = cells[cellId];
+          if (!cell) return null;
 
-          const isSelected = selectedCell?.rowIndex === rowIndex && selectedCell?.cellIndex === cellIndex;
-          const colspan = cell.render?.colspan || 1;
-          const rowspan = cell.render?.rowspan || 1;
+          const isHidden = hiddenCells.has(`${rowId}-${cellId}`);
+          const isSelected = selectedCell?.rowId === rowId && selectedCell?.cellId === cellId;
           const column = columns[cellIndex];
 
           return (
-            <TableCell
-              key={cellIndex}
-              onClick={(e) => onCellClick(rowIndex, cellIndex, row.id, column?.id, row, e)}
-              colSpan={colspan}
-              rowSpan={rowspan}
-              sx={{
-                cursor: formulaMode ? "crosshair" : "pointer",
-                position: "relative",
-                bgcolor: cell.format?.bgColor && cell.format.bgColor !== "#ffffff" 
-                  ? cell.format.bgColor 
-                  : isSelected 
-                    ? "#e3f2fd" 
-                    : formulaMode 
-                      ? "#fff9c4" 
-                      : "white",
-                border: isSelected ? "2px solid #1976d2" : "1px solid #e0e0e0",
-                fontWeight: cell.render?.bold ? 600 : 400,
-                textAlign: cell.render?.align || column?.format?.align || "left",
-                width: column?.format?.width || 150,
-                minWidth: column?.format?.width || 150,
-                p: 1,
-                "&:hover": {
-                  bgcolor: isSelected ? "#e3f2fd" : formulaMode ? "#fff59d" : "#f5f5f5",
-                },
-                transition: "all 0.15s ease",
-              }}
-            >
-              <Typography variant="body2" sx={{ fontSize: "0.8rem" }}>
-                {getCellValue(cell)}
-              </Typography>
-              {colspan > 1 && (
-                <Chip
-                  label={`cs:${colspan}`}
-                  size="small"
-                  sx={{ position: "absolute", top: 2, right: 2, height: 16, fontSize: "0.6rem" }}
-                />
-              )}
-              {rowspan > 1 && (
-                <Chip
-                  label={`rs:${rowspan}`}
-                  size="small"
-                  color="secondary"
-                  sx={{ position: "absolute", top: colspan > 1 ? 20 : 2, right: 2, height: 16, fontSize: "0.6rem" }}
-                />
-              )}
-            </TableCell>
+            <CellComponent
+              key={cellId}
+              cell={cell}
+              cellId={cellId}
+              rowId={rowId}
+              row={row}
+              colId={column?.id}
+              isSelected={isSelected}
+              formulaMode={formulaMode}
+              column={column}
+              isHidden={isHidden}
+              onCellClick={onCellClick}
+            />
           );
         })
       )}
@@ -183,19 +250,44 @@ RowContent.displayName = "RowContent";
 
 export const ReportCanvas = memo(() => {
   const dispatch = useAppDispatch();
-  const parentRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<List>(null);
+  const rowHeightCache = useRef<Record<string, number>>({});
 
-  const rows = useAppSelector(selectRows);
+  const rowOrder = useAppSelector(selectRowOrder);
+  const rows = useAppSelector(selectRowsEntities);
+  const cells = useAppSelector(selectCellsEntities);
   const columns = useAppSelector(selectColumns);
   const selectedCell = useAppSelector(selectSelectedCell);
   const formulaMode = useAppSelector(selectFormulaMode);
   const reportMeta = useAppSelector(selectReportMeta);
   const hiddenCells = useAppSelector(selectHiddenCells);
 
+  const getRowHeight = useCallback((index: number) => {
+    const rowId = rowOrder[index];
+    if (rowHeightCache.current[rowId]) {
+      return rowHeightCache.current[rowId];
+    }
+    const row = rows[rowId];
+    const baseHeight = 60;
+    
+    let maxRowspan = 1;
+    if (row && row.rowType !== "DYNAMIC") {
+      row.cellIds.forEach((cellId) => {
+        const cell = cells[cellId];
+        if (cell?.render?.rowspan) {
+          maxRowspan = Math.max(maxRowspan, cell.render.rowspan);
+        }
+      });
+    }
+    
+    const height = baseHeight * maxRowspan;
+    rowHeightCache.current[rowId] = height;
+    return height;
+  }, [rowOrder, rows, cells]);
+
   const handleCellClick = useCallback((
-    rowIndex: number,
-    cellIndex: number,
     rowId: string,
+    cellId: string,
     colId: string,
     row: Row,
     event: React.MouseEvent
@@ -206,30 +298,27 @@ export const ReportCanvas = memo(() => {
       window.dispatchEvent(new CustomEvent("formula-cell-selected", { detail: cellRef }));
       event.stopPropagation();
     } else {
-      dispatch(setSelectedCell({ rowIndex, cellIndex }));
+      dispatch(setSelectedCell({ rowId, cellId }));
     }
   }, [dispatch, formulaMode]);
 
-  const handleDynamicRowClick = useCallback((rowIndex: number) => {
+  const handleDynamicRowClick = useCallback((rowId: string) => {
     if (!formulaMode) {
-      dispatch(setSelectedCell({ rowIndex, cellIndex: -1 }));
+      dispatch(setSelectedCell({ rowId, cellId: "" }));
     }
   }, [dispatch, formulaMode]);
 
-    const rowVirtualizer = useVirtualizer({
-      count: rows.length,
-      getScrollElement: () => parentRef.current,
-      estimateSize: () => 60,
-      overscan: 50,
-    });
-
-  const virtualRows = rowVirtualizer.getVirtualItems();
-  const totalSize = rowVirtualizer.getTotalSize();
-
-  const paddingTop = virtualRows.length > 0 ? virtualRows[0]?.start ?? 0 : 0;
-  const paddingBottom = virtualRows.length > 0 
-    ? totalSize - (virtualRows[virtualRows.length - 1]?.end ?? 0) 
-    : 0;
+  const itemData = useMemo(() => ({
+    rowOrder,
+    rows,
+    cells,
+    columns,
+    selectedCell,
+    formulaMode,
+    hiddenCells,
+    onCellClick: handleCellClick,
+    onDynamicRowClick: handleDynamicRowClick,
+  }), [rowOrder, rows, cells, columns, selectedCell, formulaMode, hiddenCells, handleCellClick, handleDynamicRowClick]);
 
   return (
     <Box
@@ -278,7 +367,7 @@ export const ReportCanvas = memo(() => {
             {reportMeta.reportName || "Untitled Report"}
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            {columns.length} cols × {rows.length} rows
+            {columns.length} cols × {rowOrder.length} rows
           </Typography>
         </Box>
 
@@ -289,15 +378,8 @@ export const ReportCanvas = memo(() => {
             </Typography>
           </Box>
         ) : (
-          <Box 
-            ref={parentRef} 
-            sx={{ 
-              flex: 1, 
-              overflow: "auto",
-              contain: "strict",
-            }}
-          >
-            <TableContainer sx={{ height: "100%" }}>
+          <Box sx={{ flex: 1, overflow: "hidden" }}>
+            <TableContainer sx={{ height: "100%", overflow: "hidden" }}>
               <Table sx={{ border: "1px solid #e0e0e0", tableLayout: "fixed" }} size="small">
                 <TableHead>
                   <TableRow sx={{ bgcolor: "#f5f5f5", position: "sticky", top: 0, zIndex: 10 }}>
@@ -322,36 +404,26 @@ export const ReportCanvas = memo(() => {
                     ))}
                   </TableRow>
                 </TableHead>
-                  <TableBody>
-                    {paddingTop > 0 && (
-                      <tr><td style={{ height: paddingTop }} /></tr>
-                    )}
-                      {virtualRows.map((virtualRow) => {
-                        const row = rows[virtualRow.index];
-                        return (
-                          <RowContent
-                            key={row.id}
-                            row={row}
-                            rowIndex={virtualRow.index}
-                            columns={columns}
-                            selectedCell={selectedCell}
-                            formulaMode={formulaMode}
-                            hiddenCells={hiddenCells}
-                            onCellClick={handleCellClick}
-                            onDynamicRowClick={handleDynamicRowClick}
-                          />
-                        );
-                      })}
-                    {paddingBottom > 0 && (
-                      <tr><td style={{ height: paddingBottom }} /></tr>
-                    )}
-                  </TableBody>
               </Table>
+
+              <Box sx={{ height: "calc(100% - 70px)", overflow: "auto" }}>
+                <List
+                  ref={listRef}
+                  height={600}
+                  itemCount={rowOrder.length}
+                  itemSize={getRowHeight}
+                  width="100%"
+                  itemData={itemData}
+                  overscanCount={10}
+                >
+                  {RowContent}
+                </List>
+              </Box>
             </TableContainer>
           </Box>
         )}
 
-        {rows.length === 0 && columns.length > 0 && (
+        {rowOrder.length === 0 && columns.length > 0 && (
           <Box sx={{ textAlign: "center", py: 8, color: "text.secondary" }}>
             <Typography variant="body1" gutterBottom>
               Add rows from the left panel
