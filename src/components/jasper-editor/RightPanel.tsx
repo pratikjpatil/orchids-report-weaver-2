@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+"use client";
+
+import { useState, useEffect, useCallback, memo } from "react";
 import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
@@ -17,48 +19,86 @@ import { FormulaBuilder } from "./FormulaBuilder";
 import { DynamicRowConfig } from "./DynamicRowConfig";
 import { FilterBuilder } from "./FilterBuilder";
 import { useConfig } from "@/contexts/ConfigContext";
+import { useAppDispatch, useAppSelector } from "@/store";
+import {
+  updateCell,
+  updateCellRender,
+  updateCellFormat,
+  updateCellSource,
+  updateDynamicConfig,
+  setFormulaMode,
+} from "@/store/templateSlice";
+import {
+  selectSelectedCell,
+  selectFormulaMode,
+  selectRows,
+  selectColumns,
+  selectTemplateColumns,
+  selectTemplateForExport,
+} from "@/store/selectors";
 
-interface RightPanelProps {
-  template: any;
-  onTemplateChange: (template: any) => void;
-  selectedCell: { rowIndex: number; cellIndex: number } | null;
-  formulaMode: boolean;
-  onFormulaModeChange: (mode: boolean) => void;
-}
-
-export const RightPanel = ({
-  template,
-  onTemplateChange,
-  selectedCell,
-  formulaMode,
-  onFormulaModeChange,
-}: RightPanelProps) => {
+export const RightPanel = memo(() => {
+  const dispatch = useAppDispatch();
   const { tableConfigs, getSelectableColumns, getAllowedAggFuncs } = useConfig();
+  
+  const selectedCell = useAppSelector(selectSelectedCell);
+  const formulaMode = useAppSelector(selectFormulaMode);
+  const rows = useAppSelector(selectRows);
+  const columns = useAppSelector(selectColumns);
+  const templateColumns = useAppSelector(selectTemplateColumns);
+  const templateForExport = useAppSelector(selectTemplateForExport);
+
   const [cellTypeWarning, setCellTypeWarning] = useState<string | null>(null);
 
-  const updateCell = (field: string, value: any) => {
+  const row = selectedCell ? rows[selectedCell.rowIndex] : null;
+  const cell = row?.cells?.[selectedCell?.cellIndex ?? -1];
+  const column = selectedCell ? columns[selectedCell.cellIndex] : null;
+
+  const handleUpdateCell = useCallback((field: string, value: any) => {
     if (!selectedCell) return;
-
-    const newTemplate = { ...template };
-    const row = newTemplate.reportData.rows[selectedCell.rowIndex];
-    const cell = row.cells[selectedCell.cellIndex];
-
-    if (field.includes(".")) {
-      const parts = field.split(".");
-      let current = cell;
-      for (let i = 0; i < parts.length - 1; i++) {
-        if (!current[parts[i]]) current[parts[i]] = {};
-        current = current[parts[i]];
-      }
-      current[parts[parts.length - 1]] = value;
+    
+    if (field.startsWith("render.")) {
+      const renderField = field.replace("render.", "");
+      dispatch(updateCellRender({
+        rowIndex: selectedCell.rowIndex,
+        cellIndex: selectedCell.cellIndex,
+        render: { [renderField]: value },
+      }));
+    } else if (field.startsWith("format.")) {
+      const formatField = field.replace("format.", "");
+      dispatch(updateCellFormat({
+        rowIndex: selectedCell.rowIndex,
+        cellIndex: selectedCell.cellIndex,
+        format: { [formatField]: value },
+      }));
+    } else if (field.startsWith("source.")) {
+      const sourceField = field.replace("source.", "");
+      dispatch(updateCellSource({
+        rowIndex: selectedCell.rowIndex,
+        cellIndex: selectedCell.cellIndex,
+        source: { [sourceField]: value },
+      }));
     } else {
-      cell[field] = value;
+      dispatch(updateCell({
+        rowIndex: selectedCell.rowIndex,
+        cellIndex: selectedCell.cellIndex,
+        cell: { [field]: value },
+      }));
     }
+  }, [dispatch, selectedCell]);
 
-    onTemplateChange(newTemplate);
-  };
+  const handleFormulaModeChange = useCallback((mode: boolean) => {
+    dispatch(setFormulaMode(mode));
+  }, [dispatch]);
 
-  // Clear warning when cell selection changes
+  const handleDynamicConfigChange = useCallback((config: any) => {
+    if (!selectedCell) return;
+    dispatch(updateDynamicConfig({
+      rowIndex: selectedCell.rowIndex,
+      config,
+    }));
+  }, [dispatch, selectedCell]);
+
   useEffect(() => {
     setCellTypeWarning(null);
   }, [selectedCell]);
@@ -77,36 +117,16 @@ export const RightPanel = ({
         }}
       >
         <Box sx={{ textAlign: "center", color: "text.secondary" }}>
-          <Typography variant="body2" gutterBottom>
-            No cell selected
-          </Typography>
-          <Typography variant="caption">
-            Click on a cell in the canvas to edit its properties
-          </Typography>
+          <Typography variant="body2" gutterBottom>No cell selected</Typography>
+          <Typography variant="caption">Click on a cell in the canvas to edit its properties</Typography>
         </Box>
       </Paper>
     );
   }
 
-  const row = template.reportData.rows[selectedCell.rowIndex];
-  const cell = row?.cells?.[selectedCell.cellIndex];
-  const column = template.reportData.columns[selectedCell.cellIndex];
-  const templateColumns = template.reportData.columns.map((col: any) => ({
-    id: col.id,
-    name: col.name,
-  }));
-
-  // Handle dynamic row configuration
   if (row?.rowType === "DYNAMIC" || (row?.rowType === "DYNAMIC" && selectedCell.cellIndex === -1)) {
     return (
-      <Paper
-        elevation={0}
-        sx={{
-          width: 350,
-          overflow: "auto",
-          bgcolor: "#fafafa",
-        }}
-      >
+      <Paper elevation={0} sx={{ width: 350, overflow: "auto", bgcolor: "#fafafa" }}>
         <Box sx={{ p: 2 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
             <Typography variant="subtitle2" fontWeight={600} sx={{ color: "text.secondary" }}>
@@ -114,15 +134,10 @@ export const RightPanel = ({
             </Typography>
             <Chip label={`Row ${selectedCell.rowIndex + 1}`} size="small" sx={{ fontSize: "0.7rem" }} />
           </Box>
-
           <DynamicRowConfig
-            dynamicConfig={row.dynamicConfig || {}}
+            dynamicConfig={row?.dynamicConfig || {}}
             templateColumns={templateColumns}
-            onConfigChange={(config) => {
-              const newTemplate = { ...template };
-              newTemplate.reportData.rows[selectedCell.rowIndex].dynamicConfig = config;
-              onTemplateChange(newTemplate);
-            }}
+            onConfigChange={handleDynamicConfigChange}
           />
         </Box>
       </Paper>
@@ -134,49 +149,39 @@ export const RightPanel = ({
   const selectedTable = cell.source?.table || "";
   const selectableColumns = selectedTable ? getSelectableColumns(selectedTable) : [];
 
-  // Check if selected aggregate function is allowed for the column
-  const validateCellTypeForColumn = (cellType: string, table: string, column: string) => {
-    if (!table || !column) return true;
+  const validateCellTypeForColumn = (cellType: string, table: string, col: string) => {
+    if (!table || !col) return true;
     if (!cellType.startsWith("DB_") || cellType === "DB_VALUE") return true;
-    
     const aggFunc = cellType.replace("DB_", "");
-    const allowedFuncs = getAllowedAggFuncs(table, column);
+    const allowedFuncs = getAllowedAggFuncs(table, col);
     return allowedFuncs.includes(aggFunc);
   };
 
-  // Handle cell type change with validation
   const handleCellTypeChange = (newType: string) => {
     setCellTypeWarning(null);
-    
-    // If changing to an aggregate type, check if it's allowed
     if (newType.startsWith("DB_") && newType !== "DB_VALUE" && selectedTable && cell.source?.column) {
       const isAllowed = validateCellTypeForColumn(newType, selectedTable, cell.source.column);
       if (!isAllowed) {
         setCellTypeWarning(`${newType} is not supported for column "${cell.source.column}". Please select a different column or cell type.`);
       }
     }
-    
-    updateCell("type", newType);
+    handleUpdateCell("type", newType);
   };
 
-  // Handle column change and validate current cell type
   const handleColumnChange = (newColumn: string) => {
-    updateCell("source.column", newColumn);
-    
-    // Check if current cell type is still valid
+    handleUpdateCell("source.column", newColumn);
     const currentType = cell.type;
     if (currentType && currentType.startsWith("DB_") && currentType !== "DB_VALUE" && selectedTable && newColumn) {
       const isAllowed = validateCellTypeForColumn(currentType, selectedTable, newColumn);
       if (!isAllowed) {
         setCellTypeWarning(`${currentType} is not supported for column "${newColumn}". Cell type has been reset to DB_VALUE.`);
-        updateCell("type", "DB_VALUE");
+        handleUpdateCell("type", "DB_VALUE");
       } else {
         setCellTypeWarning(null);
       }
     }
   };
 
-  // Get allowed cell types based on selected column's aggFuncs
   const getCellTypeOptions = () => {
     const baseTypes = [
       { value: "TEXT", label: "Text" },
@@ -197,7 +202,6 @@ export const RightPanel = ({
 
     const allowedAggFuncs = getAllowedAggFuncs(selectedTable, cell.source.column);
     const aggTypes = [];
-
     if (allowedAggFuncs.includes("COUNT")) aggTypes.push({ value: "DB_COUNT", label: "DB Count" });
     if (allowedAggFuncs.includes("SUM")) aggTypes.push({ value: "DB_SUM", label: "DB Sum" });
     if (allowedAggFuncs.includes("AVG")) aggTypes.push({ value: "DB_AVG", label: "DB Average" });
@@ -208,24 +212,13 @@ export const RightPanel = ({
   };
 
   return (
-    <Paper
-      elevation={0}
-      sx={{
-        width: 350,
-        overflow: "auto",
-        bgcolor: "#fafafa",
-      }}
-    >
+    <Paper elevation={0} sx={{ width: 350, overflow: "auto", bgcolor: "#fafafa" }}>
       <Box sx={{ p: 2 }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
           <Typography variant="subtitle2" fontWeight={600} sx={{ color: "text.secondary" }}>
             CELL PROPERTIES
           </Typography>
-          <Chip
-            label={`R${selectedCell.rowIndex + 1}C${selectedCell.cellIndex + 1}`}
-            size="small"
-            sx={{ fontSize: "0.7rem" }}
-          />
+          <Chip label={`R${selectedCell.rowIndex + 1}C${selectedCell.cellIndex + 1}`} size="small" sx={{ fontSize: "0.7rem" }} />
         </Box>
 
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -237,9 +230,7 @@ export const RightPanel = ({
               label="Cell Type"
             >
               {getCellTypeOptions().map((opt) => (
-                <MenuItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </MenuItem>
+                <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
               ))}
             </Select>
           </FormControl>
@@ -259,7 +250,7 @@ export const RightPanel = ({
               multiline
               rows={3}
               value={cell.value || ""}
-              onChange={(e) => updateCell("value", e.target.value)}
+              onChange={(e) => handleUpdateCell("value", e.target.value)}
               fullWidth
             />
           )}
@@ -268,13 +259,13 @@ export const RightPanel = ({
             <FormulaBuilder
               expression={cell.expression || ""}
               variables={cell.variables || {}}
-              template={template}
-              currentCellRowId={row.id}
-              currentCellColId={column?.id}
-              onExpressionChange={(expr) => updateCell("expression", expr)}
-              onVariablesChange={(vars) => updateCell("variables", vars)}
+              template={templateForExport}
+              currentCellRowId={row?.id || ""}
+              currentCellColId={column?.id || ""}
+              onExpressionChange={(expr) => handleUpdateCell("expression", expr)}
+              onVariablesChange={(vars) => handleUpdateCell("variables", vars)}
               formulaMode={formulaMode}
-              onFormulaModeChange={onFormulaModeChange}
+              onFormulaModeChange={handleFormulaModeChange}
             />
           )}
 
@@ -285,8 +276,8 @@ export const RightPanel = ({
                 options={tableConfigs.map((t) => t.tableName)}
                 value={selectedTable || null}
                 onChange={(_, newValue) => {
-                  updateCell("source.table", newValue || "");
-                  updateCell("source.column", "");
+                  handleUpdateCell("source.table", newValue || "");
+                  handleUpdateCell("source.column", "");
                   setCellTypeWarning(null);
                 }}
                 getOptionLabel={(option) => {
@@ -320,7 +311,7 @@ export const RightPanel = ({
 
               <FilterBuilder
                 filters={cell.source?.filters || {}}
-                onFiltersChange={(filters) => updateCell("source.filters", filters)}
+                onFiltersChange={(filters) => handleUpdateCell("source.filters", filters)}
                 tableName={selectedTable}
               />
             </>
@@ -328,15 +319,13 @@ export const RightPanel = ({
 
           <Divider />
 
-          <Typography variant="subtitle2" fontWeight={600} color="text.secondary">
-            FORMATTING
-          </Typography>
+          <Typography variant="subtitle2" fontWeight={600} color="text.secondary">FORMATTING</Typography>
 
           <FormControlLabel
             control={
               <Checkbox
                 checked={cell.render?.bold || false}
-                onChange={(e) => updateCell("render.bold", e.target.checked)}
+                onChange={(e) => handleUpdateCell("render.bold", e.target.checked)}
                 size="small"
               />
             }
@@ -347,7 +336,7 @@ export const RightPanel = ({
             <InputLabel>Text Align</InputLabel>
             <Select
               value={cell.render?.align || "left"}
-              onChange={(e) => updateCell("render.align", e.target.value)}
+              onChange={(e) => handleUpdateCell("render.align", e.target.value)}
               label="Text Align"
             >
               <MenuItem value="left">Left</MenuItem>
@@ -361,8 +350,8 @@ export const RightPanel = ({
             type="number"
             size="small"
             value={cell.render?.colspan || 1}
-            onChange={(e) => updateCell("render.colspan", parseInt(e.target.value) || 1)}
-            InputProps={{ inputProps: { min: 1, max: template.reportData.columns.length } }}
+            onChange={(e) => handleUpdateCell("render.colspan", parseInt(e.target.value) || 1)}
+            InputProps={{ inputProps: { min: 1, max: columns.length } }}
             fullWidth
           />
 
@@ -371,18 +360,116 @@ export const RightPanel = ({
             type="number"
             size="small"
             value={cell.render?.rowspan || 1}
-            onChange={(e) => updateCell("render.rowspan", parseInt(e.target.value) || 1)}
+            onChange={(e) => handleUpdateCell("render.rowspan", parseInt(e.target.value) || 1)}
             InputProps={{ inputProps: { min: 1, max: 10 } }}
             fullWidth
           />
 
           <Divider />
 
+          <Typography variant="subtitle2" fontWeight={600} color="text.secondary">CELL FORMAT</Typography>
+
+          <FormControl size="small" fullWidth>
+            <InputLabel>Format Type</InputLabel>
+            <Select
+              value={cell.format?.type || "none"}
+              onChange={(e) => handleUpdateCell("format.type", e.target.value)}
+              label="Format Type"
+            >
+              <MenuItem value="none">None</MenuItem>
+              <MenuItem value="currency">Currency</MenuItem>
+              <MenuItem value="number">Number</MenuItem>
+              <MenuItem value="date">Date</MenuItem>
+              <MenuItem value="percentage">Percentage</MenuItem>
+            </Select>
+          </FormControl>
+
+          {cell.format?.type === "currency" && (
+            <>
+              <TextField
+                label="Currency Symbol"
+                size="small"
+                value={cell.format?.currencySymbol || ""}
+                onChange={(e) => handleUpdateCell("format.currencySymbol", e.target.value)}
+                placeholder="$"
+                fullWidth
+              />
+              <TextField
+                label="Decimals"
+                type="number"
+                size="small"
+                value={cell.format?.decimals ?? 2}
+                onChange={(e) => handleUpdateCell("format.decimals", parseInt(e.target.value))}
+                fullWidth
+              />
+            </>
+          )}
+
+          {cell.format?.type === "number" && (
+            <>
+              <TextField
+                label="Decimals"
+                type="number"
+                size="small"
+                value={cell.format?.decimals ?? 0}
+                onChange={(e) => handleUpdateCell("format.decimals", parseInt(e.target.value))}
+                fullWidth
+              />
+              <FormControl size="small" fullWidth>
+                <InputLabel>Thousand Separator</InputLabel>
+                <Select
+                  value={cell.format?.thousandSeparator ? "true" : "false"}
+                  onChange={(e) => handleUpdateCell("format.thousandSeparator", e.target.value === "true")}
+                  label="Thousand Separator"
+                >
+                  <MenuItem value="true">Yes</MenuItem>
+                  <MenuItem value="false">No</MenuItem>
+                </Select>
+              </FormControl>
+            </>
+          )}
+
+          {cell.format?.type === "percentage" && (
+            <TextField
+              label="Decimals"
+              type="number"
+              size="small"
+              value={cell.format?.decimals ?? 2}
+              onChange={(e) => handleUpdateCell("format.decimals", parseInt(e.target.value))}
+              fullWidth
+            />
+          )}
+
+          {cell.format?.type === "date" && (
+            <TextField
+              label="Date Format"
+              size="small"
+              value={cell.format?.outputFormat || ""}
+              onChange={(e) => handleUpdateCell("format.outputFormat", e.target.value)}
+              placeholder="dd-MMM-yyyy"
+              fullWidth
+            />
+          )}
+
+          <TextField
+            label="Background Color"
+            size="small"
+            type="color"
+            value={cell.format?.bgColor || "#ffffff"}
+            onChange={(e) => handleUpdateCell("format.bgColor", e.target.value)}
+            fullWidth
+            InputProps={{ sx: { height: 40 } }}
+          />
+
+          <Divider />
+
           <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
-            Cell ID: cell_{row.id}_{column?.id}
+            Cell ID: cell_{row?.id}_{column?.id}
           </Typography>
         </Box>
       </Box>
     </Paper>
   );
-};
+});
+
+RightPanel.displayName = "RightPanel";
