@@ -40,9 +40,10 @@ interface CellComponentProps {
   cellId: string;
   rowId: string;
   colId: string;
+  cellIndex: number;
   isSelected: boolean;
   formulaMode: boolean;
-  columnWidth: number;
+  columnWidths: number[];
   columnAlign: string;
   isHidden: boolean;
   onCellClick: (rowId: string, cellId: string, colId: string) => void;
@@ -52,9 +53,10 @@ const CellComponent = memo(({
   cellId,
   rowId,
   colId,
+  cellIndex,
   isSelected,
   formulaMode,
-  columnWidth,
+  columnWidths,
   columnAlign,
   isHidden,
   onCellClick,
@@ -86,6 +88,14 @@ const CellComponent = memo(({
 
   const colspan = cell.render?.colspan || 1;
   const rowspan = cell.render?.rowspan || 1;
+  
+  const cellWidth = useMemo(() => {
+    let totalWidth = 0;
+    for (let i = 0; i < colspan && cellIndex + i < columnWidths.length; i++) {
+      totalWidth += columnWidths[cellIndex + i];
+    }
+    return totalWidth;
+  }, [colspan, cellIndex, columnWidths]);
 
       return (
         <Box
@@ -104,9 +114,10 @@ const CellComponent = memo(({
             boxSizing: "border-box",
             fontWeight: cell.render?.bold ? 600 : 400,
             textAlign: cell.render?.align || columnAlign || "left",
-            width: columnWidth * colspan,
-            minWidth: columnWidth * colspan,
+            width: `${cellWidth}px`,
+            minWidth: `${cellWidth}px`,
             gridColumn: colspan > 1 ? `span ${colspan}` : undefined,
+            gridRow: rowspan > 1 ? `span ${rowspan}` : undefined,
             p: 1,
             zIndex: isSelected ? 10 : 1,
             overflow: "hidden",
@@ -151,7 +162,7 @@ const CellComponent = memo(({
     prevProps.isSelected === nextProps.isSelected &&
     prevProps.formulaMode === nextProps.formulaMode &&
     prevProps.isHidden === nextProps.isHidden &&
-    prevProps.columnWidth === nextProps.columnWidth &&
+    prevProps.columnWidths === nextProps.columnWidths &&
     prevProps.columnAlign === nextProps.columnAlign
   );
 });
