@@ -58,20 +58,20 @@ interface CellComponentProps {
   onCellClick: (rowId: string, cellId: string, colId: string) => void;
 }
 
-const CellComponent = memo(({
-  cellId,
-  rowId,
-  colId,
-  cellIndex,
-  isSelected,
-  formulaMode,
-  columnWidths,
-  columnAlign,
-  isHidden,
-  onCellClick,
-}: CellComponentProps) => {
-  const cell = useAppSelector(
-      (state) => state.template.cells[cellId],
+  const CellComponent = memo(({
+    cellId,
+    rowId,
+    colId,
+    cellIndex,
+    isSelected,
+    formulaMode,
+    columnWidths,
+    columnAlign,
+    isHidden,
+    onCellClick,
+  }: CellComponentProps) => {
+    const cell = useAppSelector(
+        (state) => state.template.present.cells[cellId],
       (a, b) => {
         if (!a && !b) return true;
         if (!a || !b) return false;
