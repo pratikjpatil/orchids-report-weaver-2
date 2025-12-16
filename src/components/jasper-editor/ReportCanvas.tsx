@@ -355,14 +355,12 @@ RowContent.displayName = "RowContent";
       [calculateColumnWidths]
     );
 
-  const rowVirtualizer = useVirtualizer({
-    count: rowOrder.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: useCallback(() => 60, []),
-    overscan: 20,
-  });
-
-  const rows = useAppSelector((state) => state.template.rows);
+    const rowVirtualizer = useVirtualizer({
+      count: rowOrder.length,
+      getScrollElement: () => parentRef.current,
+      estimateSize: useCallback(() => 60, []),
+      overscan: 20,
+    });
 
   const handleCellClick = useCallback((
     rowId: string,
@@ -385,6 +383,53 @@ RowContent.displayName = "RowContent";
         dispatch(setSelectedCell({ rowId, cellId: "" }));
       }
     }, [dispatch, formulaMode]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!selectedCell || formulaMode) return;
+
+      const { rowId, cellId } = selectedCell;
+      const currentRow = rows[rowId];
+      if (!currentRow || currentRow.rowType === "DYNAMIC") return;
+
+      const currentRowIndex = rowOrder.indexOf(rowId);
+      const currentCellIndex = currentRow.cellIds.indexOf(cellId);
+      
+      let newRowIndex = currentRowIndex;
+      let newCellIndex = currentCellIndex;
+
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        newRowIndex = Math.max(0, currentRowIndex - 1);
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        newRowIndex = Math.min(rowOrder.length - 1, currentRowIndex + 1);
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        newCellIndex = Math.max(0, currentCellIndex - 1);
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        newCellIndex = Math.min(currentRow.cellIds.length - 1, currentCellIndex + 1);
+      } else {
+        return;
+      }
+
+      const newRowId = rowOrder[newRowIndex];
+      const newRow = rows[newRowId];
+      
+      if (newRow && newRow.rowType !== "DYNAMIC") {
+        const validCellIndex = Math.min(newCellIndex, newRow.cellIds.length - 1);
+        const newCellId = newRow.cellIds[validCellIndex];
+        
+        if (newCellId) {
+          dispatch(setSelectedCell({ rowId: newRowId, cellId: newCellId }));
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedCell, rows, rowOrder, dispatch, formulaMode]);
   
     const handleScroll = useCallback(() => {
       if (parentRef.current && headerScrollRef.current) {
