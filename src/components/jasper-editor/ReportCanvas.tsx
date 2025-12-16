@@ -256,26 +256,23 @@ interface RowContentProps {
             flex: 1,
           }}
         >
-          {row.cellIds?.map((cellId, cellIndex) => {
-            const isHidden = hiddenCellsMap.get(`${rowId}-${cellId}`) || false;
-            const isSelected = selectedCellId === cellId;
-            const column = columns[cellIndex];
-
-            return (
-              <CellComponent
-                key={cellId}
-                cellId={cellId}
-                rowId={rowId}
-                colId={column?.id}
-                isSelected={isSelected}
-                formulaMode={formulaMode}
-                columnWidth={column?.format?.width || 150}
-                columnAlign={column?.format?.align || "left"}
-                isHidden={isHidden}
-                onCellClick={onCellClick}
-              />
-            );
-          })}
+            {row.cellIds?.map((cellId, cellIndex) => {
+              const column = columns[cellIndex];
+              return (
+                <CellComponent
+                  key={cellId}
+                  cellId={cellId}
+                  rowId={rowId}
+                  colId={column?.id}
+                  isSelected={selectedCellId === cellId}
+                  formulaMode={formulaMode}
+                  columnWidth={column?.format?.width || 150}
+                  columnAlign={column?.format?.align || "left"}
+                  isHidden={hiddenCellsMap.get(`${rowId}-${cellId}`) || false}
+                  onCellClick={onCellClick}
+                />
+              );
+            })}
         </Box>
       )}
     </Box>
