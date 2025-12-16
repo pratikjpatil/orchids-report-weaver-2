@@ -67,34 +67,37 @@ import {
   selectExistingRowIds,
 } from "@/store/selectors";
 
-const ColumnItem = memo(({ 
-  col, 
-  index, 
-  isEditing, 
-  onToggleEdit, 
-  onRemove, 
-  onUpdate 
-}: {
-  col: any;
-  index: number;
-  isEditing: boolean;
-  onToggleEdit: () => void;
-  onRemove: () => void;
-  onUpdate: (field: string, value: any) => void;
-}) => {
-  const [debouncedName, setDebouncedName] = useDebouncedInput(
-    col.name || "",
-    useCallback((value) => onUpdate("name", value), [onUpdate]),
-    200
-  );
-
-  const [debouncedBoldCondition, setDebouncedBoldCondition] = useDebouncedInput(
-    col.format?.boldCondition || "",
-    useCallback((value) => onUpdate("format.boldCondition", value), [onUpdate]),
-    300
-  );
-
-  return (
+  const ColumnItem = memo(({ 
+    col, 
+    index, 
+    isEditing, 
+    onToggleEdit, 
+    onRemove, 
+    onUpdate 
+  }: {
+    col: any;
+    index: number;
+    isEditing: boolean;
+    onToggleEdit: () => void;
+    onRemove: () => void;
+    onUpdate: (field: string, value: any) => void;
+  }) => {
+    const handleNameUpdate = useCallback((value: string) => onUpdate("name", value), [onUpdate]);
+    const handleBoldConditionUpdate = useCallback((value: string) => onUpdate("format.boldCondition", value), [onUpdate]);
+    
+    const [debouncedName, setDebouncedName] = useDebouncedInput(
+      col.name || "",
+      handleNameUpdate,
+      200
+    );
+  
+    const [debouncedBoldCondition, setDebouncedBoldCondition] = useDebouncedInput(
+      col.format?.boldCondition || "",
+      handleBoldConditionUpdate,
+      300
+    );
+  
+    return (
     <Box
       sx={{
         mb: 1,
