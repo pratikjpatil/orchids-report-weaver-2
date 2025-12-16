@@ -280,23 +280,25 @@ interface RowContentProps {
           }}
         >
             {row.cellIds?.map((cellId, cellIndex) => {
-              const column = columns[cellIndex];
-              return (
-                <CellComponent
-                  key={cellId}
-                  cellId={cellId}
-                  rowId={rowId}
-                  colId={column?.id}
-                  cellIndex={cellIndex}
-                  isSelected={selectedCellId === cellId}
-                  formulaMode={formulaMode}
-                  columnWidths={columnWidths}
-                  columnAlign={column?.format?.align || "left"}
-                  isHidden={hiddenCellsMap.get(`${rowId}-${cellId}`) || false}
-                  onCellClick={onCellClick}
-                />
-              );
-            })}
+                const column = columns[cellIndex];
+                if (!column) return null;
+                
+                return (
+                  <CellComponent
+                    key={cellId}
+                    cellId={cellId}
+                    rowId={rowId}
+                    colId={column.id}
+                    cellIndex={cellIndex}
+                    isSelected={selectedCellId === cellId}
+                    formulaMode={formulaMode}
+                    columnWidths={columnWidths}
+                    columnAlign={column.format?.align || "left"}
+                    isHidden={hiddenCellsMap.get(`${rowId}-${cellId}`) || false}
+                    onCellClick={onCellClick}
+                  />
+                );
+              })}
         </Box>
       )}
     </Box>
