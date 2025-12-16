@@ -733,7 +733,7 @@ export const LeftPanel = memo(() => {
           </AccordionDetails>
         </Accordion>
 
-        <Accordion expanded={expanded === "variants"} onChange={() => setExpanded(expanded === "variants" ? "" : "variants")}>
+        <Accordion expanded={expandedPanels.variants} onChange={() => handleExpand("variants")}>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
             <TuneIcon sx={{ mr: 1, fontSize: 20 }} />
             <Typography variant="body2" fontWeight={500}>Variants ({variants.length})</Typography>
@@ -751,7 +751,7 @@ export const LeftPanel = memo(() => {
                   </Typography>
                 </Box>
               ) : (
-                <List dense sx={{ bgcolor: "background.paper", borderRadius: 1 }}>
+                <MuiList dense sx={{ bgcolor: "background.paper", borderRadius: 1 }}>
                   {variants.map((variant, index) => (
                     <ListItem
                       key={variant.variantCode}
@@ -790,7 +790,7 @@ export const LeftPanel = memo(() => {
                       </Box>
                     </ListItem>
                   ))}
-                </List>
+                </MuiList>
               )}
             </Box>
           </AccordionDetails>
