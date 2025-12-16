@@ -275,9 +275,10 @@ interface RowContentProps {
                   cellId={cellId}
                   rowId={rowId}
                   colId={column?.id}
+                  cellIndex={cellIndex}
                   isSelected={selectedCellId === cellId}
                   formulaMode={formulaMode}
-                  columnWidth={column?.format?.width || 150}
+                  columnWidths={columnWidths}
                   columnAlign={column?.format?.align || "left"}
                   isHidden={hiddenCellsMap.get(`${rowId}-${cellId}`) || false}
                   onCellClick={onCellClick}
