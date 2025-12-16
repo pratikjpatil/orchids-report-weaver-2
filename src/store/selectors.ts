@@ -231,12 +231,71 @@ export const selectExistingRowIds = createSelector(
 
 export const selectTemplateForExport = createSelector(
   [selectTemplateMeta, selectReportMeta, selectColumns, selectRows, selectVariants],
-  (templateMeta, reportMeta, columns, rows, variants) => ({
-    templateMeta,
-    reportMeta,
-    reportData: { columns, rows },
-    variants,
-  })
+  (templateMeta, reportMeta, columns, rows, variants) => {
+    // Format columns with width instead of format object
+    const formattedColumns = columns.map(col => ({
+      id: col.id,
+      name: col.name,
+      width: col.format?.width || 150
+    }));
+
+    // Format rows with cells array (remove cells property, use inline structure)
+    const formattedRows = rows.map(row => {
+      if (row.rowType === "DYNAMIC") {
+        return {
+          rowType: row.rowType,
+          id: row.id,
+          dynamicConfig: row.dynamicConfig
+        };
+      }
+      
+      return {
+        rowType: row.rowType,
+        id: row.id,
+        cells: row.cells.map(cell => {
+          const formattedCell: any = {
+            type: cell.type
+          };
+          
+          if (cell.value !== undefined) {
+            formattedCell.value = cell.value;
+          }
+          
+          if (cell.source) {
+            formattedCell.source = cell.source;
+          }
+          
+          if (cell.expression) {
+            formattedCell.expression = cell.expression;
+          }
+          
+          if (cell.variables) {
+            formattedCell.variables = cell.variables;
+          }
+          
+          if (cell.render) {
+            formattedCell.render = cell.render;
+          }
+          
+          if (cell.format) {
+            formattedCell.format = cell.format;
+          }
+          
+          return formattedCell;
+        })
+      };
+    });
+
+    return {
+      templateMeta,
+      reportMeta,
+      reportData: {
+        columns: formattedColumns,
+        rows: formattedRows
+      },
+      variants,
+    };
+  }
 );
 
 export const selectTemplateColumns = createSelector(
