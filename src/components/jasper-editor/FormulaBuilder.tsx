@@ -138,10 +138,10 @@ export const FormulaBuilder = ({
     [rows, columns, variables, currentCellRef, dynamicRowIds]
   );
 
-  useEffect(() => {
-    const errors = validateExpression(expression);
-    setValidationErrors(errors);
-  }, [expression, validateExpression]);
+    useEffect(() => {
+      const errors = validateExpression(expression);
+      setValidationErrors(errors);
+    }, [expression, rows, columns, variables, currentCellRef]);
 
   useEffect(() => {
     const handleCellSelected = (event: any) => {
