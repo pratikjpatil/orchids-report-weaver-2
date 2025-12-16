@@ -10,15 +10,13 @@ import { useAppDispatch, useAppSelector } from "@/store";
 import { setSelectedCell } from "@/store/templateSlice";
 import {
   selectRowOrder,
-  selectRowsEntities,
-  selectCellsEntities,
   selectColumns,
   selectSelectedCell,
   selectFormulaMode,
   selectReportMeta,
   selectHiddenCells,
 } from "@/store/selectors";
-import type { Row, Cell, Column } from "@/store/templateSlice";
+import type { Cell } from "@/store/templateSlice";
 
 const getRowTypeColor = (type: string) => {
   const colors: Record<string, string> = {
@@ -47,7 +45,7 @@ interface CellComponentProps {
   columnWidth: number;
   columnAlign: string;
   isHidden: boolean;
-  onCellClick: (rowId: string, cellId: string, colId: string, event: React.MouseEvent) => void;
+  onCellClick: (rowId: string, cellId: string, colId: string) => void;
 }
 
 const CellComponent = memo(({
@@ -63,6 +61,10 @@ const CellComponent = memo(({
 }: CellComponentProps) => {
   const cell = useAppSelector((state) => state.template.cells[cellId]);
   
+  const handleClick = useCallback(() => {
+    onCellClick(rowId, cellId, colId);
+  }, [rowId, cellId, colId, onCellClick]);
+  
   if (isHidden || !cell) return null;
 
   const colspan = cell.render?.colspan || 1;
@@ -70,7 +72,7 @@ const CellComponent = memo(({
 
   return (
     <Box
-      onClick={(e) => onCellClick(rowId, cellId, colId, e)}
+      onClick={handleClick}
       sx={{
         cursor: formulaMode ? "crosshair" : "pointer",
         position: "relative",
@@ -91,7 +93,6 @@ const CellComponent = memo(({
         "&:hover": {
           bgcolor: isSelected ? "#e3f2fd" : formulaMode ? "#fff59d" : "#f5f5f5",
         },
-        transition: "background-color 0.1s ease",
       }}
     >
       <Typography variant="body2" sx={{ fontSize: "0.8rem" }}>
@@ -129,17 +130,17 @@ CellComponent.displayName = "CellComponent";
 
 interface RowContentProps {
   rowId: string;
-  columns: Column[];
+  gridTemplateColumns: string;
   selectedCellId: string | null;
   formulaMode: boolean;
   hiddenCellsMap: Map<string, boolean>;
-  onCellClick: (rowId: string, cellId: string, colId: string, event: React.MouseEvent) => void;
+  onCellClick: (rowId: string, cellId: string, colId: string) => void;
   onDynamicRowClick: (rowId: string) => void;
 }
 
 const RowContent = memo(({ 
   rowId, 
-  columns, 
+  gridTemplateColumns,
   selectedCellId, 
   formulaMode, 
   hiddenCellsMap, 
@@ -147,6 +148,11 @@ const RowContent = memo(({
   onDynamicRowClick,
 }: RowContentProps) => {
   const row = useAppSelector((state) => state.template.rows[rowId]);
+  const columns = useAppSelector(selectColumns);
+
+  const handleDynamicClick = useCallback(() => {
+    onDynamicRowClick(rowId);
+  }, [rowId, onDynamicRowClick]);
 
   if (!row) return null;
 
@@ -156,6 +162,7 @@ const RowContent = memo(({
         display: "flex",
         borderLeft: `3px solid ${getRowTypeColor(row.rowType)}`,
         "&:hover": { bgcolor: "#f9f9f9" },
+        minHeight: 60,
       }}
     >
       <Box
@@ -192,7 +199,7 @@ const RowContent = memo(({
 
       {row.rowType === "DYNAMIC" ? (
         <Box
-          onClick={() => onDynamicRowClick(rowId)}
+          onClick={handleDynamicClick}
           sx={{
             flex: 1,
             bgcolor: selectedCellId === null ? "#c8e6c9" : "#e8f5e9",
@@ -214,7 +221,7 @@ const RowContent = memo(({
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: columns.map(col => `${col.format?.width || 150}px`).join(" "),
+            gridTemplateColumns,
             flex: 1,
           }}
         >
@@ -248,7 +255,7 @@ const RowContent = memo(({
     prevProps.selectedCellId === nextProps.selectedCellId &&
     prevProps.formulaMode === nextProps.formulaMode &&
     prevProps.hiddenCellsMap === nextProps.hiddenCellsMap &&
-    prevProps.columns === nextProps.columns
+    prevProps.gridTemplateColumns === nextProps.gridTemplateColumns
   );
 });
 
@@ -271,20 +278,23 @@ export const ReportCanvas = memo(() => {
     return map;
   }, [hiddenCells]);
 
+  const gridTemplateColumns = useMemo(
+    () => columns.map(col => `${col.format?.width || 150}px`).join(" "),
+    [columns]
+  );
+
   const rowVirtualizer = useVirtualizer({
     count: rowOrder.length,
     getScrollElement: () => parentRef.current,
     estimateSize: useCallback(() => 60, []),
-    overscan: 15,
+    overscan: 20,
   });
 
   const handleCellClick = useCallback((
     rowId: string,
     cellId: string,
     colId: string,
-    event: React.MouseEvent
   ) => {
-    event.stopPropagation();
     const row = useAppSelector.getState().template.rows[rowId];
     
     if (formulaMode) {
@@ -314,7 +324,6 @@ export const ReportCanvas = memo(() => {
         display: "flex",
         flexDirection: "column",
         cursor: formulaMode ? "crosshair" : "default",
-        transition: "background-color 0.3s ease",
       }}
     >
       <Paper
@@ -390,7 +399,7 @@ export const ReportCanvas = memo(() => {
               <Box
                 sx={{
                   display: "grid",
-                  gridTemplateColumns: columns.map(col => `${col.format?.width || 150}px`).join(" "),
+                  gridTemplateColumns,
                   flex: 1,
                 }}
               >
@@ -419,6 +428,7 @@ export const ReportCanvas = memo(() => {
                 flex: 1, 
                 overflow: "auto",
                 position: "relative",
+                willChange: "transform",
               }}
             >
               <Box
@@ -441,12 +451,11 @@ export const ReportCanvas = memo(() => {
                         left: 0,
                         width: "100%",
                         transform: `translateY(${virtualRow.start}px)`,
-                        minHeight: `${virtualRow.size}px`,
                       }}
                     >
                       <RowContent
                         rowId={rowId}
-                        columns={columns}
+                        gridTemplateColumns={gridTemplateColumns}
                         selectedCellId={selectedCell?.cellId || null}
                         formulaMode={formulaMode}
                         hiddenCellsMap={hiddenCellsMap}
