@@ -353,6 +353,94 @@ const RowItem = memo(({
 
 RowItem.displayName = "RowItem";
 
+const ROW_ITEM_ESTIMATED_SIZE = 76;
+const ROW_LIST_MAX_HEIGHT = 400;
+
+const VirtualizedRowList = memo(({
+  rows,
+  draggedRowIndex,
+  dropTargetIndex,
+  onDragStart,
+  onDragOver,
+  onDragEnd,
+  onInsertClick,
+  onRemoveRow,
+}: {
+  rows: Row[];
+  draggedRowIndex: number | null;
+  dropTargetIndex: number | null;
+  onDragStart: (index: number) => void;
+  onDragOver: (e: React.DragEvent, index: number) => void;
+  onDragEnd: () => void;
+  onInsertClick: (e: React.MouseEvent<HTMLElement>, index: number) => void;
+  onRemoveRow: (rowId: string, index: number) => void;
+}) => {
+  const parentRef = useRef<HTMLDivElement | null>(null);
+
+  const rowVirtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => ROW_ITEM_ESTIMATED_SIZE,
+    overscan: 6,
+  });
+
+  const totalSize = rowVirtualizer.getTotalSize();
+  const virtualItems = rowVirtualizer.getVirtualItems();
+
+  const containerHeight = Math.min(ROW_LIST_MAX_HEIGHT, Math.max(ROW_ITEM_ESTIMATED_SIZE, rows.length * ROW_ITEM_ESTIMATED_SIZE));
+
+  return (
+    <Box
+      ref={parentRef}
+      sx={{
+        maxHeight: ROW_LIST_MAX_HEIGHT,
+        height: containerHeight,
+        overflow: "auto",
+        border: "1px solid #e0e0e0",
+        borderRadius: 1,
+        bgcolor: "background.paper",
+      }}
+    >
+      <Box
+        sx={{
+          height: totalSize,
+          position: "relative",
+        }}
+      >
+        {virtualItems.map((virtualRow) => {
+          const row = rows[virtualRow.index];
+          return (
+            <Box
+              key={row.id}
+              sx={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                transform: `translateY(${virtualRow.start}px)`,
+              }}
+            >
+              <RowItem
+                row={row}
+                index={virtualRow.index}
+                isDragging={draggedRowIndex === virtualRow.index}
+                isDropTarget={dropTargetIndex === virtualRow.index}
+                onDragStart={() => onDragStart(virtualRow.index)}
+                onDragOver={(e) => onDragOver(e, virtualRow.index)}
+                onDragEnd={onDragEnd}
+                onInsertClick={(e) => onInsertClick(e, virtualRow.index)}
+                onRemove={() => onRemoveRow(row.id, virtualRow.index)}
+              />
+            </Box>
+          );
+        })}
+      </Box>
+    </Box>
+  );
+});
+
+VirtualizedRowList.displayName = "VirtualizedRowList";
+
 export const LeftPanel = memo(() => {
   const dispatch = useAppDispatch();
   const templateMeta = useAppSelector(selectTemplateMeta);
