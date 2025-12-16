@@ -86,5 +86,11 @@ export default defineConfig(({ mode }) => ({
       '@emotion/styled'
     ],
   },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.ts',
+    include: ['**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+  },
 }));
 // Orchids restart: 1765892133422
