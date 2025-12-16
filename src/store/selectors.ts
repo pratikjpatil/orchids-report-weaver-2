@@ -230,14 +230,17 @@ export const selectExistingRowIds = createSelector(
 );
 
 export const selectTemplateForExport = createSelector(
-  [selectTemplateMeta, selectReportMeta, selectColumns, selectRows, selectVariants],
-  (templateMeta, reportMeta, columns, rows, variants) => {
-    // Format columns with width instead of format object
-    const formattedColumns = columns.map(col => ({
-      id: col.id,
-      name: col.name,
-      width: col.format?.width || 150
-    }));
+    [selectTemplateMeta, selectReportMeta, selectColumns, selectRows, selectVariants],
+    (templateMeta, reportMeta, columns, rows, variants) => {
+      // Format columns with format object containing width and alignment
+      const formattedColumns = columns.map(col => ({
+        id: col.id,
+        name: col.name,
+        format: {
+          width: col.format?.width || 150,
+          align: col.format?.align || "left"
+        }
+      }));
 
     // Format rows with cells array (remove cells property, use inline structure)
     const formattedRows = rows.map(row => {
