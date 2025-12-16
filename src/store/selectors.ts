@@ -123,38 +123,11 @@ export const selectSelectedColumn = createSelector(
   }
 );
 
-const buildSpanMap = (rowOrder: string[], rows: Record<string, Row>, cells: Record<string, Cell>) => {
-  const spanMap: Record<string, { colspan: number; rowspan: number }> = {};
-  
-  for (let rowIndex = 0; rowIndex < rowOrder.length; rowIndex++) {
-    const rowId = rowOrder[rowIndex];
-    const row = rows[rowId];
-    
-    if (row.rowType === "DYNAMIC") continue;
-    
-    for (let cellIndex = 0; cellIndex < row.cellIds.length; cellIndex++) {
-      const cellId = row.cellIds[cellIndex];
-      const cell = cells[cellId];
-      
-      if (!cell) continue;
-      
-      const colspan = cell.render?.colspan || 1;
-      const rowspan = cell.render?.rowspan || 1;
-      
-      if (colspan > 1 || rowspan > 1) {
-        spanMap[`${rowId}-${cellId}`] = { colspan, rowspan };
-      }
-    }
-  }
-  
-  return spanMap;
-};
-
-export const selectHiddenCells = createSelector(
+// Optimized: Build span map once and cache it
+const buildSpanMapOptimized = createSelector(
   [selectRowOrder, selectRowsEntities, selectCellsEntities],
   (rowOrder, rows, cells) => {
-    const hidden = new Set<string>();
-    const spanMap = buildSpanMap(rowOrder, rows, cells);
+    const spanMap = new Map<string, { colspan: number; rowspan: number; rowIndex: number; cellIndex: number }>();
     
     for (let rowIndex = 0; rowIndex < rowOrder.length; rowIndex++) {
       const rowId = rowOrder[rowIndex];
@@ -164,33 +137,59 @@ export const selectHiddenCells = createSelector(
       
       for (let cellIndex = 0; cellIndex < row.cellIds.length; cellIndex++) {
         const cellId = row.cellIds[cellIndex];
-        const span = spanMap[`${rowId}-${cellId}`];
+        const cell = cells[cellId];
         
-        if (!span) continue;
+        if (!cell) continue;
         
-        const { colspan, rowspan } = span;
+        const colspan = cell.render?.colspan || 1;
+        const rowspan = cell.render?.rowspan || 1;
         
-        for (let c = 1; c < colspan; c++) {
-          const hiddenCellId = row.cellIds[cellIndex + c];
-          if (hiddenCellId) {
-            hidden.add(`${rowId}-${hiddenCellId}`);
-          }
-        }
-        
-        for (let r = 1; r < rowspan; r++) {
-          const targetRowId = rowOrder[rowIndex + r];
-          if (!targetRowId) continue;
-          
-          const targetRow = rows[targetRowId];
-          for (let c = 0; c < colspan; c++) {
-            const hiddenCellId = targetRow.cellIds[cellIndex + c];
-            if (hiddenCellId) {
-              hidden.add(`${targetRowId}-${hiddenCellId}`);
-            }
-          }
+        if (colspan > 1 || rowspan > 1) {
+          spanMap.set(`${rowId}-${cellId}`, { colspan, rowspan, rowIndex, cellIndex });
         }
       }
     }
+    
+    return spanMap;
+  }
+);
+
+// Optimized: Use the cached span map
+export const selectHiddenCells = createSelector(
+  [selectRowOrder, selectRowsEntities, buildSpanMapOptimized],
+  (rowOrder, rows, spanMap) => {
+    const hidden = new Set<string>();
+    
+    // Iterate through cells with spans only (much faster)
+    spanMap.forEach((span, key) => {
+      const [rowId, cellId] = key.split('-');
+      const { colspan, rowspan, rowIndex, cellIndex } = span;
+      const row = rows[rowId];
+      
+      // Hide cells affected by colspan
+      for (let c = 1; c < colspan; c++) {
+        const hiddenCellId = row.cellIds[cellIndex + c];
+        if (hiddenCellId) {
+          hidden.add(`${rowId}-${hiddenCellId}`);
+        }
+      }
+      
+      // Hide cells affected by rowspan
+      for (let r = 1; r < rowspan; r++) {
+        const targetRowId = rowOrder[rowIndex + r];
+        if (!targetRowId) continue;
+        
+        const targetRow = rows[targetRowId];
+        if (!targetRow || targetRow.rowType === "DYNAMIC") continue;
+        
+        for (let c = 0; c < colspan; c++) {
+          const hiddenCellId = targetRow.cellIds[cellIndex + c];
+          if (hiddenCellId) {
+            hidden.add(`${targetRowId}-${hiddenCellId}`);
+          }
+        }
+      }
+    });
     
     return hidden;
   }
