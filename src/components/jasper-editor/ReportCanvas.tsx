@@ -330,48 +330,30 @@ export const ReportCanvas = memo(() => {
                     ))}
                   </TableRow>
                 </TableHead>
-                <TableBody>
-                  {rows.length <= 100 ? (
-                    rows.map((row, rowIndex) => (
-                      <RowContent
-                        key={row.id}
-                        row={row}
-                        rowIndex={rowIndex}
-                        columns={columns}
-                        selectedCell={selectedCell}
-                        formulaMode={formulaMode}
-                        hiddenCells={hiddenCells}
-                        onCellClick={handleCellClick}
-                        onDynamicRowClick={handleDynamicRowClick}
-                      />
-                    ))
-                  ) : (
-                    <>
-                      {paddingTop > 0 && (
-                        <tr><td style={{ height: paddingTop }} /></tr>
-                      )}
-                      {virtualRows.map((virtualRow) => {
-                        const row = rows[virtualRow.index];
-                        return (
-                          <RowContent
-                            key={row.id}
-                            row={row}
-                            rowIndex={virtualRow.index}
-                            columns={columns}
-                            selectedCell={selectedCell}
-                            formulaMode={formulaMode}
-                            hiddenCells={hiddenCells}
-                            onCellClick={handleCellClick}
-                            onDynamicRowClick={handleDynamicRowClick}
-                          />
-                        );
-                      })}
-                      {paddingBottom > 0 && (
-                        <tr><td style={{ height: paddingBottom }} /></tr>
-                      )}
-                    </>
-                  )}
-                </TableBody>
+                  <TableBody>
+                    {paddingTop > 0 && (
+                      <tr><td style={{ height: paddingTop }} /></tr>
+                    )}
+                    {virtualRows.map((virtualRow) => {
+                      const row = rows[virtualRow.index];
+                      return (
+                        <RowContent
+                          key={row.id}
+                          row={row}
+                          rowIndex={virtualRow.index}
+                          columns={columns}
+                          selectedCell={selectedCell}
+                          formulaMode={formulaMode}
+                          hiddenCells={hiddenCells}
+                          onCellClick={handleCellClick}
+                          onDynamicRowClick={handleDynamicRowClick}
+                        />
+                      );
+                    })}
+                    {paddingBottom > 0 && (
+                      <tr><td style={{ height: paddingBottom }} /></tr>
+                    )}
+                  </TableBody>
               </Table>
             </TableContainer>
           </Box>
