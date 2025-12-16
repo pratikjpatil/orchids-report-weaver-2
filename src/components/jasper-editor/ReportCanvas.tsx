@@ -580,10 +580,7 @@ RowContent.displayName = "RowContent";
   );
 });
 
-ReportCanvas.displayName = "ReportCanvas";
-"use client";
-
-import { useRef, useMemo, useCallback, memo } from "react";
+  ReportCanvas.displayName = "ReportCanvas";
 import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
