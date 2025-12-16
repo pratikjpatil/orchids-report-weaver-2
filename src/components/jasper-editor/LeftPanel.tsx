@@ -166,8 +166,8 @@ const ColumnItem = memo(({
           <TextField
             label="Bold Condition"
             size="small"
-            value={col.format?.boldCondition || ""}
-            onChange={(e) => onUpdate("format.boldCondition", e.target.value)}
+            value={debouncedBoldCondition}
+            onChange={(e) => setDebouncedBoldCondition(e.target.value)}
             placeholder="e.g., value > 1000"
             helperText="Expression to make cells bold"
             fullWidth
