@@ -401,66 +401,73 @@ RowContent.displayName = "RowContent";
             </Typography>
           </Box>
         ) : (
-            <Box sx={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-              <Box
-                sx={{
-                  flexShrink: 0,
-                  display: "flex",
-                  bgcolor: "#f5f5f5",
-                  borderBottom: "2px solid #e0e0e0",
-                  overflow: "hidden",
-                }}
-              >
+              <Box sx={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
                 <Box
                   sx={{
-                    width: 80,
-                    minWidth: 80,
-                    fontWeight: 600,
-                    fontSize: "0.75rem",
-                    color: "text.secondary",
-                    borderRight: "1px solid #e0e0e0",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    p: 1,
                     flexShrink: 0,
-                  }}
-                >
-                  #
-                </Box>
-                <Box
-                  ref={headerScrollRef}
-                  sx={{
-                    flex: 1,
-                    overflowX: "hidden",
-                    overflowY: "hidden",
+                    display: "flex",
+                    bgcolor: "#f5f5f5",
+                    borderBottom: "2px solid #e0e0e0",
+                    overflow: "hidden",
+                    position: "sticky",
+                    top: 0,
+                    zIndex: 100,
                   }}
                 >
                   <Box
                     sx={{
-                      display: "grid",
-                      gridTemplateColumns,
+                      width: 80,
+                      minWidth: 80,
+                      fontWeight: 600,
+                      fontSize: "0.75rem",
+                      color: "text.secondary",
+                      borderRight: "1px solid #e0e0e0",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      p: 1,
+                      flexShrink: 0,
+                      position: "sticky",
+                      left: 0,
+                      bgcolor: "#f5f5f5",
+                      zIndex: 101,
                     }}
                   >
-                    {columns.map((col) => (
-                      <Box
-                        key={col.id}
-                        sx={{
-                          fontWeight: 600,
-                          fontSize: "0.8rem",
-                          p: 1,
-                          borderRight: "1px solid #e0e0e0",
-                        }}
-                      >
-                        {col.name}
-                        <Typography variant="caption" display="block" color="text.secondary" sx={{ fontSize: "0.65rem" }}>
-                          {col.id} ({col.format?.width || 150}px)
-                        </Typography>
-                      </Box>
-                    ))}
+                    #
+                  </Box>
+                  <Box
+                    ref={headerScrollRef}
+                    sx={{
+                      flex: 1,
+                      overflowX: "hidden",
+                      overflowY: "hidden",
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        display: "grid",
+                        gridTemplateColumns,
+                      }}
+                    >
+                      {columns.map((col) => (
+                        <Box
+                          key={col.id}
+                          sx={{
+                            fontWeight: 600,
+                            fontSize: "0.8rem",
+                            p: 1,
+                            borderRight: "1px solid #e0e0e0",
+                          }}
+                        >
+                          {col.name}
+                          <Typography variant="caption" display="block" color="text.secondary" sx={{ fontSize: "0.65rem" }}>
+                            {col.id} ({col.format?.width || 150}px)
+                          </Typography>
+                        </Box>
+                      ))}
+                    </Box>
                   </Box>
                 </Box>
-              </Box>
 
               <Box 
                 ref={parentRef}
