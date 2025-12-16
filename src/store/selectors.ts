@@ -2,7 +2,7 @@ import { createSelector } from "@reduxjs/toolkit";
 import { RootState } from "./index";
 import type { Row, Cell } from "./templateSlice";
 
-const selectTemplate = (state: RootState) => state.template;
+const selectTemplate = (state: RootState) => state.template.present;
 
 export const selectTemplateMeta = createSelector(
   [selectTemplate],
