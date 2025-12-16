@@ -260,16 +260,27 @@ import {
             />
           )}
 
-          <TextField
-            label="Relative Width"
-            type="number"
-            size="small"
-            value={col.format?.relativeWidth || 1}
-            onChange={(e) => onUpdate("format.relativeWidth", parseFloat(e.target.value) || 1)}
-            helperText="Proportional width (e.g., 1, 2, 3)"
-            InputProps={{ inputProps: { min: 0.1, step: 0.1 } }}
-            fullWidth
-          />
+            <TextField
+              label="Width (pixels)"
+              type="number"
+              size="small"
+              value={col.format?.width || 150}
+              onChange={(e) => onUpdate("format.width", parseInt(e.target.value) || 150)}
+              helperText="Column width for canvas display"
+              InputProps={{ inputProps: { min: 50, step: 10 } }}
+              fullWidth
+            />
+
+            <TextField
+              label="Relative Width"
+              type="number"
+              size="small"
+              value={col.format?.relativeWidth || 1}
+              onChange={(e) => onUpdate("format.relativeWidth", parseFloat(e.target.value) || 1)}
+              helperText="Proportional width for PDF (e.g., 1, 2, 3)"
+              InputProps={{ inputProps: { min: 0.1, step: 0.1 } }}
+              fullWidth
+            />
         </Box>
       )}
     </Box>
