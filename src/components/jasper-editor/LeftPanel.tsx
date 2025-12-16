@@ -511,20 +511,20 @@ export const LeftPanel = memo(() => {
     }
   }, [dispatch]);
 
-  const findColumnReferences = useCallback((colId: string) => {
-    const references: string[] = [];
-    rows.forEach((row, rowIndex) => {
-      row.cells?.forEach((cell, cellIndex) => {
-        if (cell.type === "FORMULA" && cell.expression) {
-          const pattern = new RegExp(`cell_R__.*?_${colId}\\b`, "g");
-          if (pattern.test(cell.expression)) {
-            references.push(`Row ${rowIndex + 1}, Cell ${cellIndex + 1}`);
+    const findColumnReferences = useCallback((colId: string) => {
+      const references: string[] = [];
+      rows.forEach((row, rowIndex) => {
+        row.cells?.forEach((cell, cellIndex) => {
+          if (cell && cell.type === "FORMULA" && cell.expression) {
+            const pattern = new RegExp(`cell_R__.*?_${colId}\\b`, "g");
+            if (pattern.test(cell.expression)) {
+              references.push(`Row ${rowIndex + 1}, Cell ${cellIndex + 1}`);
+            }
           }
-        }
+        });
       });
-    });
-    return references;
-  }, [rows]);
+      return references;
+    }, [rows]);
 
   const handleRemoveColumn = useCallback((colId: string, index: number) => {
     const references = findColumnReferences(colId);
