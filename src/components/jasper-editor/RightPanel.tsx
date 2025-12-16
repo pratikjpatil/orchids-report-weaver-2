@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, memo, useMemo } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import { useDebouncedInput } from "@/hooks/useDebouncedInput";
 import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
@@ -32,10 +32,12 @@ import {
 import {
   selectSelectedCell,
   selectFormulaMode,
-  selectRows,
+  selectRowsEntities,
+  selectCellsEntities,
   selectColumns,
   selectTemplateColumns,
   selectTemplateForExport,
+  selectSelectedColumn,
 } from "@/store/selectors";
 
 export const RightPanel = memo(() => {
@@ -44,104 +46,98 @@ export const RightPanel = memo(() => {
   
   const selectedCell = useAppSelector(selectSelectedCell);
   const formulaMode = useAppSelector(selectFormulaMode);
-  const rows = useAppSelector(selectRows);
+  const rows = useAppSelector(selectRowsEntities);
+  const cells = useAppSelector(selectCellsEntities);
   const columns = useAppSelector(selectColumns);
   const templateColumns = useAppSelector(selectTemplateColumns);
   const templateForExport = useAppSelector(selectTemplateForExport);
+  const selectedColumn = useAppSelector(selectSelectedColumn);
 
   const [cellTypeWarning, setCellTypeWarning] = useState<string | null>(null);
 
-    const row = selectedCell ? rows[selectedCell.rowIndex] : null;
-    const cell = row?.cells?.[selectedCell?.cellIndex ?? -1];
-    const column = selectedCell ? columns[selectedCell.cellIndex] : null;
+  const row = selectedCell ? rows[selectedCell.rowId] : null;
+  const cell = selectedCell ? cells[selectedCell.cellId] : null;
+  const column = selectedColumn;
 
-    const handleUpdateCellDebounced = useCallback((field: string, value: any) => {
-      if (!selectedCell) return;
-      
-      if (field.startsWith("render.")) {
-        const renderField = field.replace("render.", "");
-        dispatch(updateCellRender({
-          rowIndex: selectedCell.rowIndex,
-          cellIndex: selectedCell.cellIndex,
-          render: { [renderField]: value },
-        }));
-      } else if (field.startsWith("format.")) {
-        const formatField = field.replace("format.", "");
-        dispatch(updateCellFormat({
-          rowIndex: selectedCell.rowIndex,
-          cellIndex: selectedCell.cellIndex,
-          format: { [formatField]: value },
-        }));
-      } else if (field.startsWith("source.")) {
-        const sourceField = field.replace("source.", "");
-        dispatch(updateCellSource({
-          rowIndex: selectedCell.rowIndex,
-          cellIndex: selectedCell.cellIndex,
-          source: { [sourceField]: value },
-        }));
-      } else {
-        dispatch(updateCell({
-          rowIndex: selectedCell.rowIndex,
-          cellIndex: selectedCell.cellIndex,
-          cell: { [field]: value },
-        }));
-      }
-    }, [dispatch, selectedCell]);
-
-    const [debouncedTextValue, setDebouncedTextValue] = useDebouncedInput(
-      cell?.value || "",
-      useCallback((value) => handleUpdateCellDebounced("value", value), [handleUpdateCellDebounced]),
-      150
-    );
-
-    useEffect(() => {
-      setDebouncedTextValue(cell?.value || "");
-    }, [cell?.value, selectedCell, setDebouncedTextValue]);
-
-    const handleUpdateCell = useCallback((field: string, value: any) => {
-    if (!selectedCell) return;
+  const handleUpdateCellDebounced = useCallback((field: string, value: any) => {
+    if (!selectedCell || !cell) return;
     
     if (field.startsWith("render.")) {
       const renderField = field.replace("render.", "");
       dispatch(updateCellRender({
-        rowIndex: selectedCell.rowIndex,
-        cellIndex: selectedCell.cellIndex,
+        cellId: selectedCell.cellId,
         render: { [renderField]: value },
       }));
     } else if (field.startsWith("format.")) {
       const formatField = field.replace("format.", "");
       dispatch(updateCellFormat({
-        rowIndex: selectedCell.rowIndex,
-        cellIndex: selectedCell.cellIndex,
+        cellId: selectedCell.cellId,
         format: { [formatField]: value },
       }));
     } else if (field.startsWith("source.")) {
       const sourceField = field.replace("source.", "");
       dispatch(updateCellSource({
-        rowIndex: selectedCell.rowIndex,
-        cellIndex: selectedCell.cellIndex,
+        cellId: selectedCell.cellId,
         source: { [sourceField]: value },
       }));
     } else {
       dispatch(updateCell({
-        rowIndex: selectedCell.rowIndex,
-        cellIndex: selectedCell.cellIndex,
+        cellId: selectedCell.cellId,
         cell: { [field]: value },
       }));
     }
-  }, [dispatch, selectedCell]);
+  }, [dispatch, selectedCell, cell]);
+
+  const [debouncedTextValue, setDebouncedTextValue] = useDebouncedInput(
+    cell?.value || "",
+    useCallback((value) => handleUpdateCellDebounced("value", value), [handleUpdateCellDebounced]),
+    150
+  );
+
+  useEffect(() => {
+    setDebouncedTextValue(cell?.value || "");
+  }, [cell?.value, selectedCell, setDebouncedTextValue]);
+
+  const handleUpdateCell = useCallback((field: string, value: any) => {
+    if (!selectedCell || !cell) return;
+    
+    if (field.startsWith("render.")) {
+      const renderField = field.replace("render.", "");
+      dispatch(updateCellRender({
+        cellId: selectedCell.cellId,
+        render: { [renderField]: value },
+      }));
+    } else if (field.startsWith("format.")) {
+      const formatField = field.replace("format.", "");
+      dispatch(updateCellFormat({
+        cellId: selectedCell.cellId,
+        format: { [formatField]: value },
+      }));
+    } else if (field.startsWith("source.")) {
+      const sourceField = field.replace("source.", "");
+      dispatch(updateCellSource({
+        cellId: selectedCell.cellId,
+        source: { [sourceField]: value },
+      }));
+    } else {
+      dispatch(updateCell({
+        cellId: selectedCell.cellId,
+        cell: { [field]: value },
+      }));
+    }
+  }, [dispatch, selectedCell, cell]);
 
   const handleFormulaModeChange = useCallback((mode: boolean) => {
     dispatch(setFormulaMode(mode));
   }, [dispatch]);
 
   const handleDynamicConfigChange = useCallback((config: any) => {
-    if (!selectedCell) return;
+    if (!selectedCell || !row) return;
     dispatch(updateDynamicConfig({
-      rowIndex: selectedCell.rowIndex,
+      rowId: selectedCell.rowId,
       config,
     }));
-  }, [dispatch, selectedCell]);
+  }, [dispatch, selectedCell, row]);
 
   useEffect(() => {
     setCellTypeWarning(null);
@@ -168,7 +164,7 @@ export const RightPanel = memo(() => {
     );
   }
 
-  if (row?.rowType === "DYNAMIC" || (row?.rowType === "DYNAMIC" && selectedCell.cellIndex === -1)) {
+  if (row?.rowType === "DYNAMIC" || !selectedCell.cellId) {
     return (
       <Paper elevation={0} sx={{ width: 350, overflow: "auto", bgcolor: "#fafafa" }}>
         <Box sx={{ p: 2 }}>
@@ -176,7 +172,7 @@ export const RightPanel = memo(() => {
             <Typography variant="subtitle2" fontWeight={600} sx={{ color: "text.secondary" }}>
               DYNAMIC ROW
             </Typography>
-            <Chip label={`Row ${selectedCell.rowIndex + 1}`} size="small" sx={{ fontSize: "0.7rem" }} />
+            <Chip label={row?.id} size="small" sx={{ fontSize: "0.7rem" }} />
           </Box>
           <DynamicRowConfig
             dynamicConfig={row?.dynamicConfig || {}}
@@ -262,7 +258,7 @@ export const RightPanel = memo(() => {
           <Typography variant="subtitle2" fontWeight={600} sx={{ color: "text.secondary" }}>
             CELL PROPERTIES
           </Typography>
-          <Chip label={`R${selectedCell.rowIndex + 1}C${selectedCell.cellIndex + 1}`} size="small" sx={{ fontSize: "0.7rem" }} />
+          <Chip label={`${row?.id}_${column?.id}`} size="small" sx={{ fontSize: "0.7rem" }} />
         </Box>
 
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -287,17 +283,17 @@ export const RightPanel = memo(() => {
 
           <Divider />
 
-            {cell.type === "TEXT" && (
-              <TextField
-                label="Text Value"
-                size="small"
-                multiline
-                rows={3}
-                value={debouncedTextValue}
-                onChange={(e) => setDebouncedTextValue(e.target.value)}
-                fullWidth
-              />
-            )}
+          {cell.type === "TEXT" && (
+            <TextField
+              label="Text Value"
+              size="small"
+              multiline
+              rows={3}
+              value={debouncedTextValue}
+              onChange={(e) => setDebouncedTextValue(e.target.value)}
+              fullWidth
+            />
+          )}
 
           {cell.type === "FORMULA" && (
             <FormulaBuilder
