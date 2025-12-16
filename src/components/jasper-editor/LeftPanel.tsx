@@ -566,11 +566,11 @@ export const LeftPanel = memo(() => {
           REPORT STRUCTURE
         </Typography>
 
-        <Accordion expanded={expanded === "metadata"} onChange={() => setExpanded(expanded === "metadata" ? "" : "metadata")}>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="body2" fontWeight={500}>Metadata</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
+          <Accordion expanded={expandedPanels.metadata} onChange={() => handleExpand("metadata")}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Typography variant="body2" fontWeight={500}>Metadata</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <TextField
                 label="Report Name"
