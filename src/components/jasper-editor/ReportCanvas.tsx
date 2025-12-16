@@ -332,15 +332,8 @@ RowContent.displayName = "RowContent";
   }, [hiddenCells]);
 
     const calculateColumnWidths = useMemo(() => {
-      const totalRelativeWidth = columns.reduce((sum, col) => sum + (col.format?.relativeWidth || 1), 0);
-      const availableWidth = 800;
-      
-      return columns.map(col => {
-        const relativeWidth = col.format?.relativeWidth || 1;
-        const calculatedWidth = Math.floor((relativeWidth / totalRelativeWidth) * availableWidth);
-        return calculatedWidth;
-      });
-    }, [columns]);
+        return columns.map(col => col.format?.width || 150);
+      }, [columns]);
 
     const gridTemplateColumns = useMemo(
       () => calculateColumnWidths.map(width => `${width}px`).join(" "),
