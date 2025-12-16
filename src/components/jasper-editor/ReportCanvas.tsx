@@ -327,13 +327,19 @@ RowContent.displayName = "RowContent";
     }
   }, [rows, dispatch, formulaMode]);
 
-  const handleDynamicRowClick = useCallback((rowId: string) => {
-    if (!formulaMode) {
-      dispatch(setSelectedCell({ rowId, cellId: "" }));
-    }
-  }, [dispatch, formulaMode]);
-
-  const virtualItems = rowVirtualizer.getVirtualItems();
+    const handleDynamicRowClick = useCallback((rowId: string) => {
+      if (!formulaMode) {
+        dispatch(setSelectedCell({ rowId, cellId: "" }));
+      }
+    }, [dispatch, formulaMode]);
+  
+    const handleScroll = useCallback(() => {
+      if (parentRef.current && headerScrollRef.current) {
+        headerScrollRef.current.scrollLeft = parentRef.current.scrollLeft;
+      }
+    }, []);
+  
+    const virtualItems = rowVirtualizer.getVirtualItems();
 
   return (
     <Box
