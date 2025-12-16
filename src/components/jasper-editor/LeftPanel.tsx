@@ -261,24 +261,17 @@ import {
           )}
 
             <TextField
-              label="Width (pixels)"
+              label="Width"
               type="number"
               size="small"
-              value={col.format?.width || 150}
-              onChange={(e) => onUpdate("format.width", parseInt(e.target.value) || 150)}
-              helperText="Column width for canvas display"
-              InputProps={{ inputProps: { min: 50, step: 10 } }}
-              fullWidth
-            />
-
-            <TextField
-              label="Relative Width"
-              type="number"
-              size="small"
-              value={col.format?.relativeWidth || 1}
-              onChange={(e) => onUpdate("format.relativeWidth", parseFloat(e.target.value) || 1)}
-              helperText="Proportional width for PDF (e.g., 1, 2, 3)"
-              InputProps={{ inputProps: { min: 0.1, step: 0.1 } }}
+              value={col.format?.width || ""}
+              onChange={(e) => {
+                const val = e.target.value;
+                onUpdate("format.width", val === "" ? undefined : parseInt(val));
+              }}
+              helperText="Leave empty for equal distribution. Specify value for proportional width (like iText PDF)"
+              placeholder="Auto"
+              InputProps={{ inputProps: { min: 1, step: 1 } }}
               fullWidth
             />
         </Box>
