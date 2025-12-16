@@ -190,18 +190,18 @@ interface RowContentProps {
   onDynamicRowClick: (rowId: string) => void;
 }
 
-  const RowContent = memo(({ 
-    rowId, 
-    gridTemplateColumns,
-    columnWidths,
-    selectedCellId, 
-    formulaMode, 
-    hiddenCellsMap, 
-    onCellClick, 
-    onDynamicRowClick,
-  }: RowContentProps) => {
-    const row = useAppSelector((state) => state.template.rows[rowId]);
-    const columns = useAppSelector(selectColumns);
+    const RowContent = memo(({ 
+      rowId, 
+      gridTemplateColumns,
+      columnWidths,
+      selectedCellId, 
+      formulaMode, 
+      hiddenCellsMap, 
+      onCellClick, 
+      onDynamicRowClick,
+    }: RowContentProps) => {
+      const row = useAppSelector((state) => state.template.present.rows[rowId]);
+      const columns = useAppSelector(selectColumns);
   
     const handleDynamicClick = useCallback(() => {
       onDynamicRowClick(rowId);
