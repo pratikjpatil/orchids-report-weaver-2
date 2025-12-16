@@ -11,7 +11,7 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
 import Chip from "@mui/material/Chip";
-import { VariableSizeList as List } from "react-window";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { setSelectedCell } from "@/store/templateSlice";
 import {
@@ -126,48 +126,40 @@ const CellComponent = memo(({
 CellComponent.displayName = "CellComponent";
 
 interface RowContentProps {
-  index: number;
-  style: React.CSSProperties;
-  data: {
-    rowOrder: string[];
-    rows: Record<string, Row>;
-    cells: Record<string, Cell>;
-    columns: Column[];
-    selectedCell: { rowId: string; cellId: string } | null;
-    formulaMode: boolean;
-    hiddenCells: Set<string>;
-    onCellClick: (rowId: string, cellId: string, colId: string, row: Row, event: React.MouseEvent) => void;
-    onDynamicRowClick: (rowId: string) => void;
-  };
+  rowId: string;
+  row: Row;
+  rows: Record<string, Row>;
+  cells: Record<string, Cell>;
+  columns: Column[];
+  selectedCell: { rowId: string; cellId: string } | null;
+  formulaMode: boolean;
+  hiddenCells: Set<string>;
+  onCellClick: (rowId: string, cellId: string, colId: string, row: Row, event: React.MouseEvent) => void;
+  onDynamicRowClick: (rowId: string) => void;
+  measureElement?: (el: Element | null) => void;
 }
 
-const RowContent = memo(({ index, style, data }: RowContentProps) => {
-  const {
-    rowOrder,
-    rows,
-    cells,
-    columns,
-    selectedCell,
-    formulaMode,
-    hiddenCells,
-    onCellClick,
-    onDynamicRowClick,
-  } = data;
-
-  const rowId = rowOrder[index];
-  const row = rows[rowId];
-
+const RowContent = memo(({ 
+  rowId, 
+  row, 
+  rows, 
+  cells, 
+  columns, 
+  selectedCell, 
+  formulaMode, 
+  hiddenCells, 
+  onCellClick, 
+  onDynamicRowClick,
+  measureElement 
+}: RowContentProps) => {
   if (!row) return null;
 
   return (
     <TableRow
-      style={style}
+      ref={measureElement}
       sx={{
         "&:hover": { bgcolor: "#f9f9f9" },
         borderLeft: `3px solid ${getRowTypeColor(row.rowType)}`,
-        display: "table",
-        width: "100%",
-        tableLayout: "fixed",
       }}
     >
       <TableCell
@@ -250,8 +242,7 @@ RowContent.displayName = "RowContent";
 
 export const ReportCanvas = memo(() => {
   const dispatch = useAppDispatch();
-  const listRef = useRef<List>(null);
-  const rowHeightCache = useRef<Record<string, number>>({});
+  const parentRef = useRef<HTMLDivElement>(null);
 
   const rowOrder = useAppSelector(selectRowOrder);
   const rows = useAppSelector(selectRowsEntities);
@@ -262,28 +253,16 @@ export const ReportCanvas = memo(() => {
   const reportMeta = useAppSelector(selectReportMeta);
   const hiddenCells = useAppSelector(selectHiddenCells);
 
-  const getRowHeight = useCallback((index: number) => {
-    const rowId = rowOrder[index];
-    if (rowHeightCache.current[rowId]) {
-      return rowHeightCache.current[rowId];
-    }
-    const row = rows[rowId];
-    const baseHeight = 60;
-    
-    let maxRowspan = 1;
-    if (row && row.rowType !== "DYNAMIC") {
-      row.cellIds.forEach((cellId) => {
-        const cell = cells[cellId];
-        if (cell?.render?.rowspan) {
-          maxRowspan = Math.max(maxRowspan, cell.render.rowspan);
-        }
-      });
-    }
-    
-    const height = baseHeight * maxRowspan;
-    rowHeightCache.current[rowId] = height;
-    return height;
-  }, [rowOrder, rows, cells]);
+  const rowVirtualizer = useVirtualizer({
+    count: rowOrder.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: useCallback(() => 60, []),
+    overscan: 5,
+    measureElement:
+      typeof window !== 'undefined' && navigator.userAgent.indexOf('Firefox') === -1
+        ? (element) => element?.getBoundingClientRect().height
+        : undefined,
+  });
 
   const handleCellClick = useCallback((
     rowId: string,
@@ -307,18 +286,6 @@ export const ReportCanvas = memo(() => {
       dispatch(setSelectedCell({ rowId, cellId: "" }));
     }
   }, [dispatch, formulaMode]);
-
-  const itemData = useMemo(() => ({
-    rowOrder,
-    rows,
-    cells,
-    columns,
-    selectedCell,
-    formulaMode,
-    hiddenCells,
-    onCellClick: handleCellClick,
-    onDynamicRowClick: handleDynamicRowClick,
-  }), [rowOrder, rows, cells, columns, selectedCell, formulaMode, hiddenCells, handleCellClick, handleDynamicRowClick]);
 
   return (
     <Box
@@ -378,11 +345,11 @@ export const ReportCanvas = memo(() => {
             </Typography>
           </Box>
         ) : (
-          <Box sx={{ flex: 1, overflow: "hidden" }}>
-            <TableContainer sx={{ height: "100%", overflow: "hidden" }}>
+          <Box sx={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+            <TableContainer sx={{ flexShrink: 0 }}>
               <Table sx={{ border: "1px solid #e0e0e0", tableLayout: "fixed" }} size="small">
                 <TableHead>
-                  <TableRow sx={{ bgcolor: "#f5f5f5", position: "sticky", top: 0, zIndex: 10 }}>
+                  <TableRow sx={{ bgcolor: "#f5f5f5" }}>
                     <TableCell sx={{ width: 80, minWidth: 80, fontWeight: 600, fontSize: "0.75rem", color: "text.secondary", borderRight: "1px solid #e0e0e0" }}>
                       #
                     </TableCell>
@@ -405,21 +372,69 @@ export const ReportCanvas = memo(() => {
                   </TableRow>
                 </TableHead>
               </Table>
-
-              <Box sx={{ height: "calc(100% - 70px)", overflow: "auto" }}>
-                <List
-                  ref={listRef}
-                  height={600}
-                  itemCount={rowOrder.length}
-                  itemSize={getRowHeight}
-                  width="100%"
-                  itemData={itemData}
-                  overscanCount={10}
-                >
-                  {RowContent}
-                </List>
-              </Box>
             </TableContainer>
+
+            <Box 
+              ref={parentRef}
+              sx={{ 
+                flex: 1, 
+                overflow: "auto",
+                contain: "strict",
+              }}
+            >
+              <Table sx={{ tableLayout: "fixed", width: "100%" }} size="small">
+                <TableBody>
+                  <TableRow>
+                    <TableCell 
+                      colSpan={columns.length + 1} 
+                      sx={{ 
+                        p: 0, 
+                        border: 0,
+                        position: "relative",
+                        height: `${rowVirtualizer.getTotalSize()}px`,
+                      }}
+                    >
+                      {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                        const rowId = rowOrder[virtualRow.index];
+                        const row = rows[rowId];
+
+                        return (
+                          <Box
+                            key={virtualRow.key}
+                            data-index={virtualRow.index}
+                            ref={rowVirtualizer.measureElement}
+                            sx={{
+                              position: "absolute",
+                              top: 0,
+                              left: 0,
+                              width: "100%",
+                              transform: `translateY(${virtualRow.start}px)`,
+                            }}
+                          >
+                            <Table sx={{ tableLayout: "fixed", width: "100%" }} size="small">
+                              <TableBody>
+                                <RowContent
+                                  rowId={rowId}
+                                  row={row}
+                                  rows={rows}
+                                  cells={cells}
+                                  columns={columns}
+                                  selectedCell={selectedCell}
+                                  formulaMode={formulaMode}
+                                  hiddenCells={hiddenCells}
+                                  onCellClick={handleCellClick}
+                                  onDynamicRowClick={handleDynamicRowClick}
+                                />
+                              </TableBody>
+                            </Table>
+                          </Box>
+                        );
+                      })}
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </Box>
           </Box>
         )}
 
