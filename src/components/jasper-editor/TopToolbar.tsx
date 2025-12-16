@@ -11,12 +11,14 @@ import DownloadIcon from "@mui/icons-material/Download";
 import UploadIcon from "@mui/icons-material/Upload";
 import TableChartIcon from "@mui/icons-material/TableChart";
 import TuneIcon from "@mui/icons-material/Tune";
+import SpeedIcon from "@mui/icons-material/Speed";
 
 interface TopToolbarProps {
   onExport: () => void;
   onSave: () => void;
   onSaveVariants: () => void;
   onImport: () => void;
+  onGenerateTestData?: (rowCount: number) => void;
   reportName: string;
   saving?: boolean;
   templateSaved?: boolean;
