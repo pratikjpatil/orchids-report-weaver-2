@@ -261,11 +261,13 @@ import {
           )}
 
           <TextField
-            label="Width (px)"
+            label="Relative Width"
             type="number"
             size="small"
-            value={col.format?.width || 150}
-            onChange={(e) => onUpdate("format.width", parseInt(e.target.value) || 150)}
+            value={col.format?.relativeWidth || 1}
+            onChange={(e) => onUpdate("format.relativeWidth", parseFloat(e.target.value) || 1)}
+            helperText="Proportional width (e.g., 1, 2, 3)"
+            InputProps={{ inputProps: { min: 0.1, step: 0.1 } }}
             fullWidth
           />
         </Box>
