@@ -310,10 +310,21 @@ RowContent.displayName = "RowContent";
     return map;
   }, [hiddenCells]);
 
-  const gridTemplateColumns = useMemo(
-    () => columns.map(col => `${col.format?.width || 150}px`).join(" "),
-    [columns]
-  );
+    const calculateColumnWidths = useMemo(() => {
+      const totalRelativeWidth = columns.reduce((sum, col) => sum + (col.format?.relativeWidth || 1), 0);
+      const availableWidth = 800;
+      
+      return columns.map(col => {
+        const relativeWidth = col.format?.relativeWidth || 1;
+        const calculatedWidth = Math.floor((relativeWidth / totalRelativeWidth) * availableWidth);
+        return calculatedWidth;
+      });
+    }, [columns]);
+
+    const gridTemplateColumns = useMemo(
+      () => calculateColumnWidths.map(width => `${width}px`).join(" "),
+      [calculateColumnWidths]
+    );
 
   const rowVirtualizer = useVirtualizer({
     count: rowOrder.length,
