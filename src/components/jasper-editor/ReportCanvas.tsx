@@ -59,7 +59,24 @@ const CellComponent = memo(({
   isHidden,
   onCellClick,
 }: CellComponentProps) => {
-  const cell = useAppSelector((state) => state.template.cells[cellId]);
+  const cell = useAppSelector(
+    (state) => state.template.cells[cellId],
+    (a, b) => {
+      if (!a && !b) return true;
+      if (!a || !b) return false;
+      return (
+        a.id === b.id &&
+        a.type === b.type &&
+        a.value === b.value &&
+        a.expression === b.expression &&
+        a.render?.colspan === b.render?.colspan &&
+        a.render?.rowspan === b.render?.rowspan &&
+        a.render?.bold === b.render?.bold &&
+        a.render?.align === b.render?.align &&
+        a.format?.bgColor === b.format?.bgColor
+      );
+    }
+  );
   
   const handleClick = useCallback(() => {
     onCellClick(rowId, cellId, colId);
