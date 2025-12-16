@@ -307,12 +307,14 @@ export const ReportCanvas = memo(() => {
     overscan: 20,
   });
 
+  const rows = useAppSelector((state) => state.template.rows);
+
   const handleCellClick = useCallback((
     rowId: string,
     cellId: string,
     colId: string,
   ) => {
-    const row = useAppSelector.getState().template.rows[rowId];
+    const row = rows[rowId];
     
     if (formulaMode) {
       if (row?.rowType === "DYNAMIC") return;
@@ -321,7 +323,7 @@ export const ReportCanvas = memo(() => {
     } else {
       dispatch(setSelectedCell({ rowId, cellId }));
     }
-  }, [dispatch, formulaMode]);
+  }, [rows, dispatch, formulaMode]);
 
   const handleDynamicRowClick = useCallback((rowId: string) => {
     if (!formulaMode) {
