@@ -1,4 +1,5 @@
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { createSlice, PayloadAction, nanoid } from "@reduxjs/toolkit";
+import { produce } from "immer";
 
 export interface CellFormat {
   type?: "none" | "currency" | "number" | "date" | "percentage";
@@ -28,6 +29,7 @@ export interface FilterCondition {
 }
 
 export interface Cell {
+  id: string;
   type: string;
   value?: string;
   expression?: string;
@@ -50,8 +52,9 @@ export interface DynamicConfig {
 export interface Row {
   id: string;
   rowType: "HEADER" | "DATA" | "SEPARATOR" | "DYNAMIC" | "FOOTER";
-  cells: Cell[];
+  cellIds: string[];
   dynamicConfig?: DynamicConfig;
+  height?: number;
 }
 
 export interface ColumnFormat {
@@ -114,12 +117,15 @@ export interface TemplateState {
   templateMeta: TemplateMeta;
   reportMeta: ReportMeta;
   columns: Column[];
-  rows: Row[];
+  rowOrder: string[];
+  rows: Record<string, Row>;
+  cells: Record<string, Cell>;
   variants: Variant[];
-  selectedCell: { rowIndex: number; cellIndex: number } | null;
+  selectedCell: { rowId: string; cellId: string } | null;
   formulaMode: boolean;
   templateSaved: boolean;
   saving: boolean;
+  rowHeights: Record<string, number>;
 }
 
 const initialState: TemplateState = {
@@ -137,12 +143,15 @@ const initialState: TemplateState = {
     ],
   },
   columns: [],
-  rows: [],
+  rowOrder: [],
+  rows: {},
+  cells: {},
   variants: [],
   selectedCell: null,
   formulaMode: false,
   templateSaved: false,
   saving: false,
+  rowHeights: {},
 };
 
 const templateSlice = createSlice({
@@ -152,14 +161,45 @@ const templateSlice = createSlice({
     setTemplate: (state, action: PayloadAction<{
       templateMeta: TemplateMeta;
       reportMeta: ReportMeta;
-      reportData: { columns: Column[]; rows: Row[] };
+      reportData: { columns: Column[]; rows: any[] };
       variants: Variant[];
     }>) => {
-      state.templateMeta = action.payload.templateMeta;
-      state.reportMeta = action.payload.reportMeta;
-      state.columns = action.payload.reportData.columns;
-      state.rows = action.payload.reportData.rows;
-      state.variants = action.payload.variants;
+      const { templateMeta, reportMeta, reportData, variants } = action.payload;
+      
+      state.templateMeta = templateMeta;
+      state.reportMeta = reportMeta;
+      state.columns = reportData.columns;
+      state.variants = variants;
+      
+      const newCells: Record<string, Cell> = {};
+      const newRows: Record<string, Row> = {};
+      const newRowOrder: string[] = [];
+      
+      reportData.rows.forEach((row: any) => {
+        const rowId = row.id;
+        newRowOrder.push(rowId);
+        
+        const cellIds: string[] = [];
+        if (row.rowType !== "DYNAMIC" && row.cells) {
+          row.cells.forEach((cell: any) => {
+            const cellId = cell.id || nanoid();
+            cellIds.push(cellId);
+            newCells[cellId] = { ...cell, id: cellId };
+          });
+        }
+        
+        newRows[rowId] = {
+          id: rowId,
+          rowType: row.rowType,
+          cellIds,
+          dynamicConfig: row.dynamicConfig,
+          height: row.height || 60,
+        };
+      });
+      
+      state.cells = newCells;
+      state.rows = newRows;
+      state.rowOrder = newRowOrder;
     },
 
     setTemplateMeta: (state, action: PayloadAction<Partial<TemplateMeta>>) => {
@@ -177,9 +217,17 @@ const templateSlice = createSlice({
         format: { width: 150 },
       };
       state.columns.push(newColumn);
-      state.rows.forEach((row) => {
+      
+      state.rowOrder.forEach((rowId) => {
+        const row = state.rows[rowId];
         if (row.rowType !== "DYNAMIC") {
-          row.cells.push({ type: "TEXT", value: "" });
+          const newCellId = nanoid();
+          row.cellIds.push(newCellId);
+          state.cells[newCellId] = {
+            id: newCellId,
+            type: "TEXT",
+            value: "",
+          };
         }
       });
     },
@@ -201,109 +249,139 @@ const templateSlice = createSlice({
     removeColumn: (state, action: PayloadAction<{ colId: string; index: number }>) => {
       const { colId, index } = action.payload;
       state.columns = state.columns.filter((c) => c.id !== colId);
-      state.rows.forEach((row) => {
-        if (row.rowType !== "DYNAMIC") {
-          row.cells = row.cells.filter((_, i) => i !== index);
+      
+      state.rowOrder.forEach((rowId) => {
+        const row = state.rows[rowId];
+        if (row.rowType !== "DYNAMIC" && row.cellIds.length > index) {
+          const removedCellId = row.cellIds[index];
+          delete state.cells[removedCellId];
+          row.cellIds.splice(index, 1);
         }
       });
     },
 
-    addRow: (state, action: PayloadAction<{ row: Row; insertAt?: number }>) => {
+    addRow: (state, action: PayloadAction<{ row: any; insertAt?: number }>) => {
       const { row, insertAt } = action.payload;
+      const rowId = row.id;
+      
+      const cellIds: string[] = [];
+      if (row.rowType !== "DYNAMIC") {
+        state.columns.forEach(() => {
+          const cellId = nanoid();
+          cellIds.push(cellId);
+          state.cells[cellId] = {
+            id: cellId,
+            type: "TEXT",
+            value: "",
+          };
+        });
+      }
+      
+      state.rows[rowId] = {
+        id: rowId,
+        rowType: row.rowType,
+        cellIds,
+        dynamicConfig: row.dynamicConfig,
+        height: 60,
+      };
+      
       if (insertAt !== undefined) {
-        state.rows.splice(insertAt, 0, row);
+        state.rowOrder.splice(insertAt, 0, rowId);
       } else {
-        state.rows.push(row);
+        state.rowOrder.push(rowId);
       }
     },
 
-    updateRow: (state, action: PayloadAction<{ index: number; row: Partial<Row> }>) => {
-      const { index, row } = action.payload;
-      if (state.rows[index]) {
-        state.rows[index] = { ...state.rows[index], ...row };
+    updateRow: (state, action: PayloadAction<{ rowId: string; row: Partial<Row> }>) => {
+      const { rowId, row } = action.payload;
+      if (state.rows[rowId]) {
+        state.rows[rowId] = { ...state.rows[rowId], ...row };
       }
     },
 
     removeRow: (state, action: PayloadAction<{ rowId: string }>) => {
-      state.rows = state.rows.filter((r) => r.id !== action.payload.rowId);
+      const { rowId } = action.payload;
+      const row = state.rows[rowId];
+      
+      if (row) {
+        row.cellIds.forEach((cellId) => {
+          delete state.cells[cellId];
+        });
+        delete state.rows[rowId];
+        delete state.rowHeights[rowId];
+        state.rowOrder = state.rowOrder.filter((id) => id !== rowId);
+      }
     },
 
     reorderRows: (state, action: PayloadAction<{ fromIndex: number; toIndex: number }>) => {
       const { fromIndex, toIndex } = action.payload;
-      const [removed] = state.rows.splice(fromIndex, 1);
-      state.rows.splice(toIndex, 0, removed);
+      const [removed] = state.rowOrder.splice(fromIndex, 1);
+      state.rowOrder.splice(toIndex, 0, removed);
     },
 
     updateCell: (state, action: PayloadAction<{
-      rowIndex: number;
-      cellIndex: number;
+      cellId: string;
       cell: Partial<Cell>;
     }>) => {
-      const { rowIndex, cellIndex, cell } = action.payload;
-      if (state.rows[rowIndex]?.cells?.[cellIndex]) {
-        state.rows[rowIndex].cells[cellIndex] = {
-          ...state.rows[rowIndex].cells[cellIndex],
-          ...cell,
-        };
+      const { cellId, cell } = action.payload;
+      if (state.cells[cellId]) {
+        state.cells[cellId] = { ...state.cells[cellId], ...cell };
       }
     },
 
     updateCellRender: (state, action: PayloadAction<{
-      rowIndex: number;
-      cellIndex: number;
+      cellId: string;
       render: Partial<CellRender>;
     }>) => {
-      const { rowIndex, cellIndex, render } = action.payload;
-      if (state.rows[rowIndex]?.cells?.[cellIndex]) {
-        state.rows[rowIndex].cells[cellIndex].render = {
-          ...state.rows[rowIndex].cells[cellIndex].render,
+      const { cellId, render } = action.payload;
+      if (state.cells[cellId]) {
+        state.cells[cellId].render = {
+          ...state.cells[cellId].render,
           ...render,
         };
       }
     },
 
     updateCellFormat: (state, action: PayloadAction<{
-      rowIndex: number;
-      cellIndex: number;
+      cellId: string;
       format: Partial<CellFormat>;
     }>) => {
-      const { rowIndex, cellIndex, format } = action.payload;
-      if (state.rows[rowIndex]?.cells?.[cellIndex]) {
-        state.rows[rowIndex].cells[cellIndex].format = {
-          ...state.rows[rowIndex].cells[cellIndex].format,
+      const { cellId, format } = action.payload;
+      if (state.cells[cellId]) {
+        state.cells[cellId].format = {
+          ...state.cells[cellId].format,
           ...format,
         };
       }
     },
 
     updateCellSource: (state, action: PayloadAction<{
-      rowIndex: number;
-      cellIndex: number;
+      cellId: string;
       source: Partial<CellSource>;
     }>) => {
-      const { rowIndex, cellIndex, source } = action.payload;
-      if (state.rows[rowIndex]?.cells?.[cellIndex]) {
-        state.rows[rowIndex].cells[cellIndex].source = {
-          ...state.rows[rowIndex].cells[cellIndex].source,
+      const { cellId, source } = action.payload;
+      if (state.cells[cellId]) {
+        state.cells[cellId].source = {
+          ...state.cells[cellId].source,
           ...source,
         };
       }
     },
 
     updateDynamicConfig: (state, action: PayloadAction<{
-      rowIndex: number;
+      rowId: string;
       config: Partial<DynamicConfig>;
     }>) => {
-      const { rowIndex, config } = action.payload;
-      if (state.rows[rowIndex]) {
-        state.rows[rowIndex].dynamicConfig = {
-          ...state.rows[rowIndex].dynamicConfig,
+      const { rowId, config } = action.payload;
+      if (state.rows[rowId]) {
+        state.rows[rowId].dynamicConfig = {
+          ...state.rows[rowId].dynamicConfig,
           ...config,
         } as DynamicConfig;
       }
     },
 
-    setSelectedCell: (state, action: PayloadAction<{ rowIndex: number; cellIndex: number } | null>) => {
+    setSelectedCell: (state, action: PayloadAction<{ rowId: string; cellId: string } | null>) => {
       state.selectedCell = action.payload;
     },
 
@@ -338,6 +416,14 @@ const templateSlice = createSlice({
       state.templateSaved = action.payload;
     },
 
+    setRowHeight: (state, action: PayloadAction<{ rowId: string; height: number }>) => {
+      const { rowId, height } = action.payload;
+      state.rowHeights[rowId] = height;
+      if (state.rows[rowId]) {
+        state.rows[rowId].height = height;
+      }
+    },
+
     resetTemplate: () => initialState,
   },
 });
@@ -367,6 +453,7 @@ export const {
   removeVariant,
   setSaving,
   setTemplateSaved,
+  setRowHeight,
   resetTemplate,
 } = templateSlice.actions;
 
