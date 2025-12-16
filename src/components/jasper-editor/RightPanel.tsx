@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, memo } from "react";
+import { useState, useEffect, useCallback, useMemo, memo } from "react";
 import { useDebouncedInput } from "@/hooks/useDebouncedInput";
 import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
@@ -59,45 +59,7 @@ export const RightPanel = memo(() => {
   const cell = selectedCell ? cells[selectedCell.cellId] : null;
   const column = selectedColumn;
 
-  const handleUpdateCellDebounced = useCallback((field: string, value: any) => {
-    if (!selectedCell || !cell) return;
-    
-    if (field.startsWith("render.")) {
-      const renderField = field.replace("render.", "");
-      dispatch(updateCellRender({
-        cellId: selectedCell.cellId,
-        render: { [renderField]: value },
-      }));
-    } else if (field.startsWith("format.")) {
-      const formatField = field.replace("format.", "");
-      dispatch(updateCellFormat({
-        cellId: selectedCell.cellId,
-        format: { [formatField]: value },
-      }));
-    } else if (field.startsWith("source.")) {
-      const sourceField = field.replace("source.", "");
-      dispatch(updateCellSource({
-        cellId: selectedCell.cellId,
-        source: { [sourceField]: value },
-      }));
-    } else {
-      dispatch(updateCell({
-        cellId: selectedCell.cellId,
-        cell: { [field]: value },
-      }));
-    }
-  }, [dispatch, selectedCell, cell]);
-
-  const [debouncedTextValue, setDebouncedTextValue] = useDebouncedInput(
-    cell?.value || "",
-    useCallback((value) => handleUpdateCellDebounced("value", value), [handleUpdateCellDebounced]),
-    150
-  );
-
-  useEffect(() => {
-    setDebouncedTextValue(cell?.value || "");
-  }, [cell?.value, selectedCell, setDebouncedTextValue]);
-
+  // Memoize handlers to prevent recreating on every render
   const handleUpdateCell = useCallback((field: string, value: any) => {
     if (!selectedCell || !cell) return;
     
@@ -125,7 +87,25 @@ export const RightPanel = memo(() => {
         cell: { [field]: value },
       }));
     }
-  }, [dispatch, selectedCell, cell]);
+  }, [dispatch, selectedCell?.cellId, cell]);
+
+  // Stable debounced handler
+  const handleTextValueChange = useCallback((value: string) => {
+    handleUpdateCell("value", value);
+  }, [handleUpdateCell]);
+
+  const [debouncedTextValue, setDebouncedTextValue] = useDebouncedInput(
+    cell?.value || "",
+    handleTextValueChange,
+    150
+  );
+
+  // Only update debounced value when cell changes (not on every render)
+  useEffect(() => {
+    if (cell?.value !== debouncedTextValue) {
+      setDebouncedTextValue(cell?.value || "");
+    }
+  }, [cell?.value, selectedCell?.cellId]); // Include cellId to detect cell changes
 
   const handleFormulaModeChange = useCallback((mode: boolean) => {
     dispatch(setFormulaMode(mode));
@@ -137,11 +117,80 @@ export const RightPanel = memo(() => {
       rowId: selectedCell.rowId,
       config,
     }));
-  }, [dispatch, selectedCell, row]);
+  }, [dispatch, selectedCell?.rowId, row]);
 
   useEffect(() => {
     setCellTypeWarning(null);
-  }, [selectedCell]);
+  }, [selectedCell?.cellId]); // Only reset when cell changes
+
+  // Memoize selected table and columns
+  const selectedTable = useMemo(() => cell?.source?.table || "", [cell?.source?.table]);
+  const selectableColumns = useMemo(
+    () => selectedTable ? getSelectableColumns(selectedTable) : [],
+    [selectedTable, getSelectableColumns]
+  );
+
+  const validateCellTypeForColumn = useCallback((cellType: string, table: string, col: string) => {
+    if (!table || !col) return true;
+    if (!cellType.startsWith("DB_") || cellType === "DB_VALUE") return true;
+    const aggFunc = cellType.replace("DB_", "");
+    const allowedFuncs = getAllowedAggFuncs(table, col);
+    return allowedFuncs.includes(aggFunc);
+  }, [getAllowedAggFuncs]);
+
+  const handleCellTypeChange = useCallback((newType: string) => {
+    setCellTypeWarning(null);
+    if (newType.startsWith("DB_") && newType !== "DB_VALUE" && selectedTable && cell?.source?.column) {
+      const isAllowed = validateCellTypeForColumn(newType, selectedTable, cell.source.column);
+      if (!isAllowed) {
+        setCellTypeWarning(`${newType} is not supported for column "${cell.source.column}". Please select a different column or cell type.`);
+      }
+    }
+    handleUpdateCell("type", newType);
+  }, [handleUpdateCell, selectedTable, cell?.source?.column, validateCellTypeForColumn]);
+
+  const handleColumnChange = useCallback((newColumn: string) => {
+    handleUpdateCell("source.column", newColumn);
+    const currentType = cell?.type;
+    if (currentType && currentType.startsWith("DB_") && currentType !== "DB_VALUE" && selectedTable && newColumn) {
+      const isAllowed = validateCellTypeForColumn(currentType, selectedTable, newColumn);
+      if (!isAllowed) {
+        setCellTypeWarning(`${currentType} is not supported for column "${newColumn}". Cell type has been reset to DB_VALUE.`);
+        handleUpdateCell("type", "DB_VALUE");
+      } else {
+        setCellTypeWarning(null);
+      }
+    }
+  }, [handleUpdateCell, cell?.type, selectedTable, validateCellTypeForColumn]);
+
+  const getCellTypeOptions = useMemo(() => {
+    const baseTypes = [
+      { value: "TEXT", label: "Text" },
+      { value: "DB_VALUE", label: "DB Value" },
+      { value: "FORMULA", label: "Formula" },
+    ];
+
+    if (!selectedTable || !cell?.source?.column) {
+      return [
+        ...baseTypes,
+        { value: "DB_COUNT", label: "DB Count" },
+        { value: "DB_SUM", label: "DB Sum" },
+        { value: "DB_AVG", label: "DB Average" },
+        { value: "DB_MIN", label: "DB Min" },
+        { value: "DB_MAX", label: "DB Max" },
+      ];
+    }
+
+    const allowedAggFuncs = getAllowedAggFuncs(selectedTable, cell.source.column);
+    const aggTypes = [];
+    if (allowedAggFuncs.includes("COUNT")) aggTypes.push({ value: "DB_COUNT", label: "DB Count" });
+    if (allowedAggFuncs.includes("SUM")) aggTypes.push({ value: "DB_SUM", label: "DB Sum" });
+    if (allowedAggFuncs.includes("AVG")) aggTypes.push({ value: "DB_AVG", label: "DB Average" });
+    if (allowedAggFuncs.includes("MIN")) aggTypes.push({ value: "DB_MIN", label: "DB Min" });
+    if (allowedAggFuncs.includes("MAX")) aggTypes.push({ value: "DB_MAX", label: "DB Max" });
+
+    return [...baseTypes, ...aggTypes];
+  }, [selectedTable, cell?.source?.column, getAllowedAggFuncs]);
 
   if (!selectedCell) {
     return (
@@ -186,71 +235,6 @@ export const RightPanel = memo(() => {
 
   if (!cell) return null;
 
-  const selectedTable = cell.source?.table || "";
-  const selectableColumns = selectedTable ? getSelectableColumns(selectedTable) : [];
-
-  const validateCellTypeForColumn = (cellType: string, table: string, col: string) => {
-    if (!table || !col) return true;
-    if (!cellType.startsWith("DB_") || cellType === "DB_VALUE") return true;
-    const aggFunc = cellType.replace("DB_", "");
-    const allowedFuncs = getAllowedAggFuncs(table, col);
-    return allowedFuncs.includes(aggFunc);
-  };
-
-  const handleCellTypeChange = (newType: string) => {
-    setCellTypeWarning(null);
-    if (newType.startsWith("DB_") && newType !== "DB_VALUE" && selectedTable && cell.source?.column) {
-      const isAllowed = validateCellTypeForColumn(newType, selectedTable, cell.source.column);
-      if (!isAllowed) {
-        setCellTypeWarning(`${newType} is not supported for column "${cell.source.column}". Please select a different column or cell type.`);
-      }
-    }
-    handleUpdateCell("type", newType);
-  };
-
-  const handleColumnChange = (newColumn: string) => {
-    handleUpdateCell("source.column", newColumn);
-    const currentType = cell.type;
-    if (currentType && currentType.startsWith("DB_") && currentType !== "DB_VALUE" && selectedTable && newColumn) {
-      const isAllowed = validateCellTypeForColumn(currentType, selectedTable, newColumn);
-      if (!isAllowed) {
-        setCellTypeWarning(`${currentType} is not supported for column "${newColumn}". Cell type has been reset to DB_VALUE.`);
-        handleUpdateCell("type", "DB_VALUE");
-      } else {
-        setCellTypeWarning(null);
-      }
-    }
-  };
-
-  const getCellTypeOptions = () => {
-    const baseTypes = [
-      { value: "TEXT", label: "Text" },
-      { value: "DB_VALUE", label: "DB Value" },
-      { value: "FORMULA", label: "Formula" },
-    ];
-
-    if (!selectedTable || !cell.source?.column) {
-      return [
-        ...baseTypes,
-        { value: "DB_COUNT", label: "DB Count" },
-        { value: "DB_SUM", label: "DB Sum" },
-        { value: "DB_AVG", label: "DB Average" },
-        { value: "DB_MIN", label: "DB Min" },
-        { value: "DB_MAX", label: "DB Max" },
-      ];
-    }
-
-    const allowedAggFuncs = getAllowedAggFuncs(selectedTable, cell.source.column);
-    const aggTypes = [];
-    if (allowedAggFuncs.includes("COUNT")) aggTypes.push({ value: "DB_COUNT", label: "DB Count" });
-    if (allowedAggFuncs.includes("SUM")) aggTypes.push({ value: "DB_SUM", label: "DB Sum" });
-    if (allowedAggFuncs.includes("AVG")) aggTypes.push({ value: "DB_AVG", label: "DB Average" });
-    if (allowedAggFuncs.includes("MIN")) aggTypes.push({ value: "DB_MIN", label: "DB Min" });
-    if (allowedAggFuncs.includes("MAX")) aggTypes.push({ value: "DB_MAX", label: "DB Max" });
-
-    return [...baseTypes, ...aggTypes];
-  };
-
   return (
     <Paper elevation={0} sx={{ width: 350, overflow: "auto", bgcolor: "#fafafa" }}>
       <Box sx={{ p: 2 }}>
@@ -269,7 +253,7 @@ export const RightPanel = memo(() => {
               onChange={(e) => handleCellTypeChange(e.target.value)}
               label="Cell Type"
             >
-              {getCellTypeOptions().map((opt) => (
+              {getCellTypeOptions.map((opt) => (
                 <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
               ))}
             </Select>
