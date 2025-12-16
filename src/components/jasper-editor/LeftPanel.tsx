@@ -82,6 +82,18 @@ const ColumnItem = memo(({
   onRemove: () => void;
   onUpdate: (field: string, value: any) => void;
 }) => {
+  const [debouncedName, setDebouncedName] = useDebouncedInput(
+    col.name || "",
+    useCallback((value) => onUpdate("name", value), [onUpdate]),
+    200
+  );
+
+  const [debouncedBoldCondition, setDebouncedBoldCondition] = useDebouncedInput(
+    col.format?.boldCondition || "",
+    useCallback((value) => onUpdate("format.boldCondition", value), [onUpdate]),
+    300
+  );
+
   return (
     <Box
       sx={{
@@ -121,8 +133,8 @@ const ColumnItem = memo(({
           <TextField
             label="Column Name"
             size="small"
-            value={col.name || ""}
-            onChange={(e) => onUpdate("name", e.target.value)}
+            value={debouncedName}
+            onChange={(e) => setDebouncedName(e.target.value)}
             fullWidth
           />
           
