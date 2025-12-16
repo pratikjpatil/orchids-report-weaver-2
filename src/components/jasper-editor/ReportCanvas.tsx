@@ -32,7 +32,16 @@ const getRowTypeColor = (type: string) => {
 const getCellValue = (cell: Cell) => {
   if (cell.type === "TEXT") return cell.value || "Click to edit";
   if (cell.type === "FORMULA") return `= ${cell.expression || "formula"}`;
-  if (cell.type?.startsWith("DB_")) return `${cell.type} (${cell.source?.column || "?"})`;
+  if (cell.type?.startsWith("DB_")) {
+    const table = cell.source?.table || "";
+    const column = cell.source?.column || "";
+    if (!table || !column) return `${cell.type}(?)`;
+    const aggType = cell.type.replace("DB_", "");
+    if (cell.type === "DB_VALUE") {
+      return `${table}.${column}`;
+    }
+    return `${aggType}(${table}.${column})`;
+  }
   return "Empty cell";
 };
 
