@@ -218,7 +218,7 @@ const templateSlice = createSlice({
         const newColumn: Column = {
           id: `C__${state.columns.length + 1}`,
           name: `Column ${state.columns.length + 1}`,
-          format: { width: 150, relativeWidth: DEFAULT_RELATIVE_WIDTH },
+          format: {},
         };
         state.columns.push(newColumn);
       
