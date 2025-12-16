@@ -324,6 +324,7 @@ RowContent.displayName = "RowContent";
     const formulaMode = useAppSelector(selectFormulaMode);
     const reportMeta = useAppSelector(selectReportMeta);
     const hiddenCells = useAppSelector(selectHiddenCells);
+    const rows = useAppSelector((state) => state.template.present.rows);
 
   const hiddenCellsMap = useMemo(() => {
     const map = new Map<string, boolean>();
