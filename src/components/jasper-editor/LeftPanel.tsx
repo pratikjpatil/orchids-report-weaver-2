@@ -631,32 +631,32 @@ export const LeftPanel = memo(() => {
           </AccordionDetails>
         </Accordion>
 
-        <Accordion expanded={expanded === "columns"} onChange={() => setExpanded(expanded === "columns" ? "" : "columns")}>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <ViewColumnIcon sx={{ mr: 1, fontSize: 20 }} />
-            <Typography variant="body2" fontWeight={500}>Columns ({columns.length})</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-              <Button variant="outlined" size="small" startIcon={<AddIcon />} onClick={handleAddColumn} fullWidth>
-                Add Column
-              </Button>
-              <List dense sx={{ bgcolor: "background.paper", borderRadius: 1 }}>
-                {columns.map((col, index) => (
-                  <ColumnItem
-                    key={col.id}
-                    col={col}
-                    index={index}
-                    isEditing={editingColumn === index}
-                    onToggleEdit={() => setEditingColumn(editingColumn === index ? null : index)}
-                    onRemove={() => handleRemoveColumn(col.id, index)}
-                    onUpdate={(field, value) => handleUpdateColumn(index, field, value)}
-                  />
-                ))}
-              </List>
-            </Box>
-          </AccordionDetails>
-        </Accordion>
+          <Accordion expanded={expandedPanels.columns} onChange={() => handleExpand("columns")}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <ViewColumnIcon sx={{ mr: 1, fontSize: 20 }} />
+              <Typography variant="body2" fontWeight={500}>Columns ({columns.length})</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                <Button variant="outlined" size="small" startIcon={<AddIcon />} onClick={handleAddColumn} fullWidth>
+                  Add Column
+                </Button>
+                <MuiList dense sx={{ bgcolor: "background.paper", borderRadius: 1 }}>
+                  {columns.map((col, index) => (
+                    <ColumnItem
+                      key={col.id}
+                      col={col}
+                      index={index}
+                      isEditing={editingColumn === index}
+                      onToggleEdit={() => setEditingColumn(editingColumn === index ? null : index)}
+                      onRemove={() => handleRemoveColumn(col.id, index)}
+                      onUpdate={(field, value) => handleUpdateColumn(index, field, value)}
+                    />
+                  ))}
+                </MuiList>
+              </Box>
+            </AccordionDetails>
+          </Accordion>
 
         <Accordion expanded={expanded === "rows"} onChange={() => setExpanded(expanded === "rows" ? "" : "rows")}>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
