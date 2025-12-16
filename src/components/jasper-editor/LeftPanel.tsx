@@ -1,4 +1,6 @@
-import { useState } from "react";
+"use client";
+
+import { useState, useCallback, memo } from "react";
 import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
@@ -30,41 +32,320 @@ import ViewColumnIcon from "@mui/icons-material/ViewColumn";
 import ViewAgendaIcon from "@mui/icons-material/ViewAgenda";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import TuneIcon from "@mui/icons-material/Tune";
+import FormatAlignLeftIcon from "@mui/icons-material/FormatAlignLeft";
+import FormatAlignCenterIcon from "@mui/icons-material/FormatAlignCenter";
+import FormatAlignRightIcon from "@mui/icons-material/FormatAlignRight";
 import { AddRowDialog } from "./AddRowDialog";
 import { VariantDialog } from "./VariantDialog";
+import { useAppDispatch, useAppSelector } from "@/store";
+import {
+  setTemplateMeta,
+  setReportMeta,
+  addColumn,
+  updateColumn,
+  updateColumnFormat,
+  removeColumn,
+  addRow,
+  removeRow,
+  reorderRows,
+  setVariants,
+  addVariant,
+  updateVariant,
+  removeVariant,
+  Row,
+  Variant,
+} from "@/store/templateSlice";
+import {
+  selectTemplateMeta,
+  selectReportMeta,
+  selectColumns,
+  selectRows,
+  selectVariants,
+  selectTableNames,
+  selectDynamicRowIds,
+  selectExistingRowIds,
+} from "@/store/selectors";
 
-// Variant interfaces
-interface Param {
-  paramName: string;
-  label: string;
-  paramType: "STRING" | "DATE" | "NUMBER" | "BOOLEAN";
-  required: boolean;
-  multiValued: boolean;
-  uiHint: string;
-}
+const ColumnItem = memo(({ 
+  col, 
+  index, 
+  isEditing, 
+  onToggleEdit, 
+  onRemove, 
+  onUpdate 
+}: {
+  col: any;
+  index: number;
+  isEditing: boolean;
+  onToggleEdit: () => void;
+  onRemove: () => void;
+  onUpdate: (field: string, value: any) => void;
+}) => {
+  return (
+    <Box
+      sx={{
+        mb: 1,
+        p: 1,
+        bgcolor: "background.paper",
+        borderRadius: 1,
+        border: "1px solid #e0e0e0",
+      }}
+    >
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          mb: 1,
+        }}
+      >
+        <Typography variant="caption" fontWeight={600} color="primary">
+          {col.id}
+        </Typography>
+        <Box>
+          <IconButton size="small" onClick={onToggleEdit}>
+            <ExpandMoreIcon
+              fontSize="small"
+              sx={{ transform: isEditing ? "rotate(180deg)" : "none" }}
+            />
+          </IconButton>
+          <IconButton size="small" onClick={onRemove}>
+            <DeleteIcon fontSize="small" />
+          </IconButton>
+        </Box>
+      </Box>
 
-interface FilterRule {
-  scopeType: "ALL_DB" | "TABLE" | "DYNAMIC_TABLE";
-  scopeValue?: string;
-  paramName: string;
-  dbColumn: string;
-  operator: string;
-}
+      {isEditing && (
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+          <TextField
+            label="Column Name"
+            size="small"
+            value={col.name || ""}
+            onChange={(e) => onUpdate("name", e.target.value)}
+            fullWidth
+          />
+          
+          <Box sx={{ display: "flex", gap: 1 }}>
+            <Typography variant="caption" sx={{ alignSelf: "center", minWidth: 60 }}>Align:</Typography>
+            <IconButton 
+              size="small" 
+              color={col.format?.align === "left" || !col.format?.align ? "primary" : "default"}
+              onClick={() => onUpdate("format.align", "left")}
+            >
+              <FormatAlignLeftIcon fontSize="small" />
+            </IconButton>
+            <IconButton 
+              size="small" 
+              color={col.format?.align === "center" ? "primary" : "default"}
+              onClick={() => onUpdate("format.align", "center")}
+            >
+              <FormatAlignCenterIcon fontSize="small" />
+            </IconButton>
+            <IconButton 
+              size="small" 
+              color={col.format?.align === "right" ? "primary" : "default"}
+              onClick={() => onUpdate("format.align", "right")}
+            >
+              <FormatAlignRightIcon fontSize="small" />
+            </IconButton>
+          </Box>
 
-interface Variant {
-  variantCode: string;
-  variantName: string;
-  description: string;
-  params: Param[];
-  filterRules: FilterRule[];
-}
+          <TextField
+            label="Bold Condition"
+            size="small"
+            value={col.format?.boldCondition || ""}
+            onChange={(e) => onUpdate("format.boldCondition", e.target.value)}
+            placeholder="e.g., value > 1000"
+            helperText="Expression to make cells bold"
+            fullWidth
+          />
 
-interface LeftPanelProps {
-  template: any;
-  onTemplateChange: (template: any) => void;
-}
+          <FormControl size="small" fullWidth>
+            <InputLabel>Format Type</InputLabel>
+            <Select
+              value={col.format?.type || "none"}
+              onChange={(e) => onUpdate("format.type", e.target.value)}
+              label="Format Type"
+            >
+              <MenuItem value="none">None</MenuItem>
+              <MenuItem value="currency">Currency</MenuItem>
+              <MenuItem value="number">Number</MenuItem>
+              <MenuItem value="date">Date</MenuItem>
+              <MenuItem value="percentage">Percentage</MenuItem>
+            </Select>
+          </FormControl>
 
-export const LeftPanel = ({ template, onTemplateChange }: LeftPanelProps) => {
+          {col.format?.type === "currency" && (
+            <>
+              <TextField
+                label="Currency Symbol"
+                size="small"
+                value={col.format?.currencySymbol || ""}
+                onChange={(e) => onUpdate("format.currencySymbol", e.target.value)}
+                placeholder="$"
+                fullWidth
+              />
+              <TextField
+                label="Decimals"
+                type="number"
+                size="small"
+                value={col.format?.decimals ?? 2}
+                onChange={(e) => onUpdate("format.decimals", parseInt(e.target.value))}
+                fullWidth
+              />
+            </>
+          )}
+
+          {col.format?.type === "number" && (
+            <>
+              <TextField
+                label="Decimals"
+                type="number"
+                size="small"
+                value={col.format?.decimals ?? 0}
+                onChange={(e) => onUpdate("format.decimals", parseInt(e.target.value))}
+                fullWidth
+              />
+              <FormControl size="small" fullWidth>
+                <InputLabel>Thousand Separator</InputLabel>
+                <Select
+                  value={col.format?.thousandSeparator ? "true" : "false"}
+                  onChange={(e) => onUpdate("format.thousandSeparator", e.target.value === "true")}
+                  label="Thousand Separator"
+                >
+                  <MenuItem value="true">Yes</MenuItem>
+                  <MenuItem value="false">No</MenuItem>
+                </Select>
+              </FormControl>
+            </>
+          )}
+
+          {col.format?.type === "percentage" && (
+            <TextField
+              label="Decimals"
+              type="number"
+              size="small"
+              value={col.format?.decimals ?? 2}
+              onChange={(e) => onUpdate("format.decimals", parseInt(e.target.value))}
+              fullWidth
+            />
+          )}
+
+          {col.format?.type === "date" && (
+            <TextField
+              label="Date Format"
+              size="small"
+              value={col.format?.outputFormat || ""}
+              onChange={(e) => onUpdate("format.outputFormat", e.target.value)}
+              placeholder="dd-MMM-yyyy"
+              fullWidth
+            />
+          )}
+
+          <TextField
+            label="Width (px)"
+            type="number"
+            size="small"
+            value={col.format?.width || 150}
+            onChange={(e) => onUpdate("format.width", parseInt(e.target.value) || 150)}
+            fullWidth
+          />
+        </Box>
+      )}
+    </Box>
+  );
+});
+
+ColumnItem.displayName = "ColumnItem";
+
+const RowItem = memo(({
+  row,
+  index,
+  isDragging,
+  isDropTarget,
+  onDragStart,
+  onDragOver,
+  onDragEnd,
+  onInsertClick,
+  onRemove,
+}: {
+  row: Row;
+  index: number;
+  isDragging: boolean;
+  isDropTarget: boolean;
+  onDragStart: () => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDragEnd: () => void;
+  onInsertClick: (e: React.MouseEvent<HTMLElement>) => void;
+  onRemove: () => void;
+}) => {
+  return (
+    <Box>
+      <Box
+        onDragOver={onDragOver}
+        onDrop={onDragEnd}
+        sx={{
+          height: isDropTarget && !isDragging ? 24 : 4,
+          bgcolor: isDropTarget && !isDragging ? "primary.light" : "transparent",
+          borderRadius: 1,
+          transition: "all 0.2s",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {isDropTarget && !isDragging && (
+          <Typography variant="caption" color="primary.contrastText">
+            Drop here
+          </Typography>
+        )}
+      </Box>
+      <ListItem
+        draggable
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+        sx={{
+          cursor: "grab",
+          bgcolor: isDragging ? "action.selected" : "transparent",
+          borderRadius: 1,
+          "&:hover": { bgcolor: "action.hover" },
+        }}
+        secondaryAction={
+          <Box sx={{ display: "flex", gap: 0.5 }}>
+            <IconButton size="small" onClick={onInsertClick} title="Insert row after">
+              <AddIcon fontSize="small" />
+            </IconButton>
+            <IconButton edge="end" size="small" onClick={onRemove}>
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          </Box>
+        }
+      >
+        <DragIndicatorIcon sx={{ mr: 1, color: "text.disabled", cursor: "grab" }} fontSize="small" />
+        <ListItemText
+          primary={row.id}
+          secondary={row.rowType}
+          primaryTypographyProps={{ variant: "body2" }}
+          secondaryTypographyProps={{ variant: "caption", color: "primary" }}
+        />
+      </ListItem>
+    </Box>
+  );
+});
+
+RowItem.displayName = "RowItem";
+
+export const LeftPanel = memo(() => {
+  const dispatch = useAppDispatch();
+  const templateMeta = useAppSelector(selectTemplateMeta);
+  const reportMeta = useAppSelector(selectReportMeta);
+  const columns = useAppSelector(selectColumns);
+  const rows = useAppSelector(selectRows);
+  const variants = useAppSelector(selectVariants);
+  const tableNames = useAppSelector(selectTableNames);
+  const dynamicRowIds = useAppSelector(selectDynamicRowIds);
+  const existingRowIds = useAppSelector(selectExistingRowIds);
+
   const [expanded, setExpanded] = useState<string>("metadata");
   const [deleteDialog, setDeleteDialog] = useState<{
     type: "row" | "column";
@@ -77,141 +358,39 @@ export const LeftPanel = ({ template, onTemplateChange }: LeftPanelProps) => {
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
   const [insertMenuAnchor, setInsertMenuAnchor] = useState<null | HTMLElement>(null);
   const [insertAtIndex, setInsertAtIndex] = useState<number>(0);
-  const [addRowDialog, setAddRowDialog] = useState<{ open: boolean; rowType: string; insertAt?: number }>({ open: false, rowType: "" });
+  const [addRowDialogState, setAddRowDialogState] = useState<{ open: boolean; rowType: string; insertAt?: number }>({ open: false, rowType: "" });
   const [editingColumn, setEditingColumn] = useState<number | null>(null);
-  
-  // Variant dialog state
   const [variantDialogOpen, setVariantDialogOpen] = useState(false);
   const [editingVariant, setEditingVariant] = useState<Variant | null>(null);
   const [editingVariantIndex, setEditingVariantIndex] = useState<number | null>(null);
 
-  // Variants helpers
-  const variants: Variant[] = template.variants || [];
-
-  const getTableNames = () => {
-    const tables = new Set<string>();
-    template.reportData?.rows?.forEach((row: any) => {
-      row.cells?.forEach((cell: any) => {
-        if (cell.source?.table) {
-          tables.add(cell.source.table);
-        }
-      });
-      if (row.dynamicConfig?.table) {
-        tables.add(row.dynamicConfig.table);
-      }
-    });
-    return Array.from(tables);
-  };
-
-  const getDynamicRowIds = () => {
-    return template.reportData?.rows
-      ?.filter((row: any) => row.rowType === "DYNAMIC")
-      .map((row: any) => row.id) || [];
-  };
-
-  const updateVariants = (newVariants: Variant[]) => {
-    onTemplateChange({ ...template, variants: newVariants });
-  };
-
-  const openAddVariantDialog = () => {
-    setEditingVariant(null);
-    setEditingVariantIndex(null);
-    setVariantDialogOpen(true);
-  };
-
-  const openEditVariantDialog = (variant: Variant, index: number) => {
-    setEditingVariant(variant);
-    setEditingVariantIndex(index);
-    setVariantDialogOpen(true);
-  };
-
-  const handleSaveVariant = (variant: Variant) => {
-    if (editingVariantIndex !== null) {
-      // Update existing variant
-      const updated = [...variants];
-      updated[editingVariantIndex] = variant;
-      updateVariants(updated);
-    } else {
-      // Add new variant
-      updateVariants([...variants, variant]);
-    }
-    setVariantDialogOpen(false);
-    setEditingVariant(null);
-    setEditingVariantIndex(null);
-  };
-
-  const removeVariant = (index: number) => {
-    updateVariants(variants.filter((_, i) => i !== index));
-  };
-
-  const tables = getTableNames();
-  const dynamicRowIds = getDynamicRowIds();
-
-  // Template metadata helpers
-  const updateMetadata = (field: string, value: any) => {
-    const newTemplate = { ...template };
+  const updateMetadata = useCallback((field: string, value: any) => {
     if (field.startsWith("reportMeta.")) {
       const metaField = field.split(".")[1];
-      newTemplate.reportMeta[metaField] = value;
+      dispatch(setReportMeta({ [metaField]: value }));
     } else if (field.startsWith("templateMeta.")) {
       const metaField = field.split(".")[1];
-      newTemplate.templateMeta[metaField] = value;
-    } else {
-      newTemplate[field] = value;
+      dispatch(setTemplateMeta({ [metaField]: value }));
     }
-    onTemplateChange(newTemplate);
-  };
+  }, [dispatch]);
 
-  const addColumn = () => {
-    const newColumn = {
-      id: `C__${template.reportData.columns.length + 1}`,
-      name: `Column ${template.reportData.columns.length + 1}`,
-      format: {
-        width: 150,
-      },
-    };
+  const handleAddColumn = useCallback(() => {
+    dispatch(addColumn());
+  }, [dispatch]);
 
-    const updatedRows = template.reportData.rows.map((row: any) => {
-      if (row.rowType === "DYNAMIC") {
-        return row;
-      }
-      return {
-        ...row,
-        cells: [...(row.cells || []), { type: "TEXT", value: "" }],
-      };
-    });
-
-    onTemplateChange({
-      ...template,
-      reportData: {
-        columns: [...template.reportData.columns, newColumn],
-        rows: updatedRows,
-      },
-    });
-  };
-
-  const updateColumn = (index: number, field: string, value: any) => {
-    const newColumns = [...template.reportData.columns];
+  const handleUpdateColumn = useCallback((index: number, field: string, value: any) => {
     if (field.includes(".")) {
       const parts = field.split(".");
-      if (!newColumns[index].format) newColumns[index].format = {};
-      newColumns[index].format[parts[1]] = value;
+      dispatch(updateColumnFormat({ index, format: { [parts[1]]: value } }));
     } else {
-      newColumns[index][field] = value;
+      dispatch(updateColumn({ index, column: { [field]: value } }));
     }
-    onTemplateChange({
-      ...template,
-      reportData: {
-        rows: template.reportData.rows,
-        columns: newColumns,
-      },
-    });
-  };
+  }, [dispatch]);
 
-  const findColumnReferences = (colId: string) => {
+  const findColumnReferences = useCallback((colId: string) => {
     const references: string[] = [];
-    template.reportData.rows.forEach((row: any, rowIndex: number) => {
-      row.cells?.forEach((cell: any, cellIndex: number) => {
+    rows.forEach((row, rowIndex) => {
+      row.cells?.forEach((cell, cellIndex) => {
         if (cell.type === "FORMULA" && cell.expression) {
           const pattern = new RegExp(`cell_R__.*?_${colId}\\b`, "g");
           if (pattern.test(cell.expression)) {
@@ -221,68 +400,33 @@ export const LeftPanel = ({ template, onTemplateChange }: LeftPanelProps) => {
       });
     });
     return references;
-  };
+  }, [rows]);
 
-  const removeColumn = (colId: string, index: number) => {
+  const handleRemoveColumn = useCallback((colId: string, index: number) => {
     const references = findColumnReferences(colId);
     if (references.length > 0) {
       setDeleteDialog({ type: "column", index, references, colId, rowId: "" });
     } else {
-      confirmRemoveColumn(colId, index);
+      dispatch(removeColumn({ colId, index }));
     }
-  };
+  }, [dispatch, findColumnReferences]);
 
-  const confirmRemoveColumn = (colId: string, index: number) => {
-    const updatedRows = template.reportData.rows.map((row: any) => {
-      if (row.rowType === "DYNAMIC") return row;
-      return {
-        ...row,
-        cells: (row.cells || []).filter(
-          (_: any, i: number) => template.reportData.columns[i].id !== colId
-        ),
-      };
-    });
-
-    const colPattern = new RegExp(`cell_R_.*?_${colId}\\b`, "g");
-
-    updatedRows.forEach((row: any) => {
-      row.cells?.forEach((cell: any) => {
-        if (cell.type === "FORMULA" && cell.expression) {
-          cell.expression = cell.expression
-            .replace(colPattern, "")
-            .replace(/\s+/g, " ")
-            .trim();
-        }
-      });
-    });
-
-    onTemplateChange({
-      ...template,
-      reportData: {
-        columns: template.reportData.columns.filter(
-          (c: any, i: number) => c.id !== colId
-        ),
-        rows: updatedRows,
-      },
-    });
+  const confirmRemoveColumn = useCallback((colId: string, index: number) => {
+    dispatch(removeColumn({ colId, index }));
     setDeleteDialog(null);
-  };
+  }, [dispatch]);
 
-  const openAddRowDialog = (type: string, insertAt?: number) => {
-    setAddRowDialog({ open: true, rowType: type, insertAt });
+  const openAddRowDialog = useCallback((type: string, insertAt?: number) => {
+    setAddRowDialogState({ open: true, rowType: type, insertAt });
     setInsertMenuAnchor(null);
-  };
+  }, []);
 
-  const addRow = (rowId: string) => {
-    const { rowType, insertAt } = addRowDialog;
-    
-    const newRow: any = {
-      rowType,
+  const handleAddRow = useCallback((rowId: string) => {
+    const { rowType, insertAt } = addRowDialogState;
+    const newRow: Row = {
+      rowType: rowType as Row["rowType"],
       id: rowId,
-      cells: template.reportData.columns.map(() => ({
-        type: "TEXT",
-        value: "",
-      })),
+      cells: columns.map(() => ({ type: "TEXT", value: "" })),
     };
 
     if (rowType === "DYNAMIC") {
@@ -296,53 +440,36 @@ export const LeftPanel = ({ template, onTemplateChange }: LeftPanelProps) => {
       newRow.cells = [];
     }
 
-    const newRows = [...template.reportData.rows];
-    if (insertAt !== undefined) {
-      newRows.splice(insertAt, 0, newRow);
-    } else {
-      newRows.push(newRow);
-    }
-    onTemplateChange({
-      ...template,
-      reportData: { ...template.reportData, rows: newRows },
-    });
-    setAddRowDialog({ open: false, rowType: "" });
-  };
+    dispatch(addRow({ row: newRow, insertAt }));
+    setAddRowDialogState({ open: false, rowType: "" });
+  }, [dispatch, addRowDialogState, columns]);
 
-  const existingRowIds = template.reportData.rows.map((r: any) => r.id);
-
-  const handleDragStart = (index: number) => {
+  const handleDragStart = useCallback((index: number) => {
     setDraggedRowIndex(index);
-  };
+  }, []);
 
-  const handleDragOver = (e: React.DragEvent, index: number) => {
+  const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
     e.preventDefault();
     setDropTargetIndex(index);
-  };
+  }, []);
 
-  const handleDragEnd = () => {
+  const handleDragEnd = useCallback(() => {
     if (draggedRowIndex !== null && dropTargetIndex !== null && draggedRowIndex !== dropTargetIndex) {
-      const newRows = [...template.reportData.rows];
-      const [draggedRow] = newRows.splice(draggedRowIndex, 1);
-      newRows.splice(dropTargetIndex, 0, draggedRow);
-      onTemplateChange({
-        ...template,
-        reportData: { ...template.reportData, rows: newRows },
-      });
+      dispatch(reorderRows({ fromIndex: draggedRowIndex, toIndex: dropTargetIndex }));
     }
     setDraggedRowIndex(null);
     setDropTargetIndex(null);
-  };
+  }, [dispatch, draggedRowIndex, dropTargetIndex]);
 
-  const handleInsertClick = (event: React.MouseEvent<HTMLElement>, index: number) => {
+  const handleInsertClick = useCallback((event: React.MouseEvent<HTMLElement>, index: number) => {
     setInsertMenuAnchor(event.currentTarget);
     setInsertAtIndex(index);
-  };
+  }, []);
 
-  const findRowReferences = (rowId: string) => {
+  const findRowReferences = useCallback((rowId: string) => {
     const references: string[] = [];
-    template.reportData.rows.forEach((row: any, rIndex: number) => {
-      row.cells?.forEach((cell: any, cellIndex: number) => {
+    rows.forEach((row, rIndex) => {
+      row.cells?.forEach((cell, cellIndex) => {
         if (cell.type === "FORMULA" && cell.expression) {
           const pattern = new RegExp(`cell_${rowId}_C__.*?\\b`, "g");
           if (pattern.test(cell.expression)) {
@@ -352,45 +479,48 @@ export const LeftPanel = ({ template, onTemplateChange }: LeftPanelProps) => {
       });
     });
     return references;
-  };
+  }, [rows]);
 
-  const removeRow = (rowId: string, index: number) => {
+  const handleRemoveRow = useCallback((rowId: string, index: number) => {
     const references = findRowReferences(rowId);
     if (references.length > 0) {
       setDeleteDialog({ type: "row", index, references, colId: "", rowId });
     } else {
-      confirmRemoveRow(rowId, index);
+      dispatch(removeRow({ rowId }));
     }
-  };
+  }, [dispatch, findRowReferences]);
 
-  const confirmRemoveRow = (rowId: string, index: number) => {
-    const rowPattern = new RegExp(`cell_${rowId}_C__.*?\\b`, "g");
-
-    const updatedRows = template.reportData.rows
-      .filter((r: any, i: number) => r.id !== rowId)
-      .map((row: any) => {
-        if (row.cells) {
-          row.cells.forEach((cell: any) => {
-            if (cell.type === "FORMULA" && cell.expression) {
-              cell.expression = cell.expression
-                .replace(rowPattern, "")
-                .replace(/\s+/g, " ")
-                .trim();
-            }
-          });
-        }
-        return row;
-      });
-    const updatedRowsReportData = {
-      ...template.reportData,
-      rows: updatedRows,
-    };
-    onTemplateChange({
-      ...template,
-      reportData: updatedRowsReportData,
-    });
+  const confirmRemoveRow = useCallback((rowId: string) => {
+    dispatch(removeRow({ rowId }));
     setDeleteDialog(null);
-  };
+  }, [dispatch]);
+
+  const openAddVariantDialog = useCallback(() => {
+    setEditingVariant(null);
+    setEditingVariantIndex(null);
+    setVariantDialogOpen(true);
+  }, []);
+
+  const openEditVariantDialog = useCallback((variant: Variant, index: number) => {
+    setEditingVariant(variant);
+    setEditingVariantIndex(index);
+    setVariantDialogOpen(true);
+  }, []);
+
+  const handleSaveVariant = useCallback((variant: Variant) => {
+    if (editingVariantIndex !== null) {
+      dispatch(updateVariant({ index: editingVariantIndex, variant }));
+    } else {
+      dispatch(addVariant(variant));
+    }
+    setVariantDialogOpen(false);
+    setEditingVariant(null);
+    setEditingVariantIndex(null);
+  }, [dispatch, editingVariantIndex]);
+
+  const handleRemoveVariant = useCallback((index: number) => {
+    dispatch(removeVariant(index));
+  }, [dispatch]);
 
   return (
     <Paper
@@ -403,54 +533,35 @@ export const LeftPanel = ({ template, onTemplateChange }: LeftPanelProps) => {
       }}
     >
       <Box sx={{ p: 2 }}>
-        <Typography
-          variant="subtitle2"
-          fontWeight={600}
-          gutterBottom
-          sx={{ color: "text.secondary" }}
-        >
+        <Typography variant="subtitle2" fontWeight={600} gutterBottom sx={{ color: "text.secondary" }}>
           REPORT STRUCTURE
         </Typography>
 
-        {/* Metadata Accordion */}
-        <Accordion
-          expanded={expanded === "metadata"}
-          onChange={() =>
-            setExpanded(expanded === "metadata" ? "" : "metadata")
-          }
-        >
+        <Accordion expanded={expanded === "metadata"} onChange={() => setExpanded(expanded === "metadata" ? "" : "metadata")}>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="body2" fontWeight={500}>
-              Metadata
-            </Typography>
+            <Typography variant="body2" fontWeight={500}>Metadata</Typography>
           </AccordionSummary>
           <AccordionDetails>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <TextField
                 label="Report Name"
                 size="small"
-                value={template.reportMeta.reportName}
-                onChange={(e) =>
-                  updateMetadata("reportMeta.reportName", e.target.value)
-                }
+                value={reportMeta.reportName}
+                onChange={(e) => updateMetadata("reportMeta.reportName", e.target.value)}
                 fullWidth
               />
               <TextField
                 label="Template ID"
                 size="small"
-                value={template.templateMeta.templateId}
-                onChange={(e) =>
-                  updateMetadata("templateMeta.templateId", e.target.value)
-                }
+                value={templateMeta.templateId}
+                onChange={(e) => updateMetadata("templateMeta.templateId", e.target.value)}
                 fullWidth
               />
               <TextField
                 label="Version"
                 size="small"
-                value={template.templateMeta.version || ""}
-                onChange={(e) =>
-                  updateMetadata("templateMeta.version", e.target.value)
-                }
+                value={templateMeta.version || ""}
+                onChange={(e) => updateMetadata("templateMeta.version", e.target.value)}
                 placeholder="e.g., 1.0.0"
                 fullWidth
               />
@@ -459,20 +570,16 @@ export const LeftPanel = ({ template, onTemplateChange }: LeftPanelProps) => {
                 size="small"
                 multiline
                 rows={2}
-                value={template.templateMeta.description || ""}
-                onChange={(e) =>
-                  updateMetadata("templateMeta.description", e.target.value)
-                }
+                value={templateMeta.description || ""}
+                onChange={(e) => updateMetadata("templateMeta.description", e.target.value)}
                 placeholder="Template description..."
                 fullWidth
               />
               <FormControl size="small" fullWidth>
                 <InputLabel>Page Size</InputLabel>
                 <Select
-                  value={template.templateMeta.pageSize}
-                  onChange={(e) =>
-                    updateMetadata("templateMeta.pageSize", e.target.value)
-                  }
+                  value={templateMeta.pageSize}
+                  onChange={(e) => updateMetadata("templateMeta.pageSize", e.target.value)}
                   label="Page Size"
                 >
                   <MenuItem value="A4">A4</MenuItem>
@@ -483,13 +590,8 @@ export const LeftPanel = ({ template, onTemplateChange }: LeftPanelProps) => {
               <FormControl size="small" fullWidth>
                 <InputLabel>Orientation</InputLabel>
                 <Select
-                  value={template.templateMeta.pageOrientation}
-                  onChange={(e) =>
-                    updateMetadata(
-                      "templateMeta.pageOrientation",
-                      e.target.value
-                    )
-                  }
+                  value={templateMeta.pageOrientation}
+                  onChange={(e) => updateMetadata("templateMeta.pageOrientation", e.target.value)}
                   label="Orientation"
                 >
                   <MenuItem value="portrait">Portrait</MenuItem>
@@ -500,358 +602,68 @@ export const LeftPanel = ({ template, onTemplateChange }: LeftPanelProps) => {
           </AccordionDetails>
         </Accordion>
 
-        {/* Columns Accordion */}
-        <Accordion
-          expanded={expanded === "columns"}
-          onChange={() => setExpanded(expanded === "columns" ? "" : "columns")}
-        >
+        <Accordion expanded={expanded === "columns"} onChange={() => setExpanded(expanded === "columns" ? "" : "columns")}>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
             <ViewColumnIcon sx={{ mr: 1, fontSize: 20 }} />
-            <Typography variant="body2" fontWeight={500}>
-              Columns ({template.reportData.columns.length})
-            </Typography>
+            <Typography variant="body2" fontWeight={500}>Columns ({columns.length})</Typography>
           </AccordionSummary>
           <AccordionDetails>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<AddIcon />}
-                onClick={addColumn}
-                fullWidth
-              >
+              <Button variant="outlined" size="small" startIcon={<AddIcon />} onClick={handleAddColumn} fullWidth>
                 Add Column
               </Button>
               <List dense sx={{ bgcolor: "background.paper", borderRadius: 1 }}>
-                {template.reportData.columns.map((col: any, index: number) => (
-                  <Box
-                    key={index}
-                    sx={{
-                      mb: 1,
-                      p: 1,
-                      bgcolor: "background.paper",
-                      borderRadius: 1,
-                      border: "1px solid #e0e0e0",
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        mb: 1,
-                      }}
-                    >
-                      <Typography
-                        variant="caption"
-                        fontWeight={600}
-                        color="primary"
-                      >
-                        {col.id}
-                      </Typography>
-                      <Box>
-                        <IconButton
-                          size="small"
-                          onClick={() =>
-                            setEditingColumn(
-                              editingColumn === index ? null : index
-                            )
-                          }
-                        >
-                          <ExpandMoreIcon
-                            fontSize="small"
-                            sx={{
-                              transform:
-                                editingColumn === index
-                                  ? "rotate(180deg)"
-                                  : "none",
-                            }}
-                          />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => removeColumn(col.id, index)}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Box>
-                    </Box>
-
-                    {editingColumn === index && (
-                      <Box
-                        sx={{
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: 1.5,
-                        }}
-                      >
-                        <TextField
-                          label="Column Name"
-                          size="small"
-                          value={col.name || ""}
-                          onChange={(e) =>
-                            updateColumn(index, "name", e.target.value)
-                          }
-                          fullWidth
-                        />
-                        <FormControl size="small" fullWidth>
-                          <InputLabel>Format Type</InputLabel>
-                          <Select
-                            value={col.format?.type || "none"}
-                            onChange={(e) =>
-                              updateColumn(index, "format.type", e.target.value)
-                            }
-                            label="Format Type"
-                          >
-                            <MenuItem value="none">None</MenuItem>
-                            <MenuItem value="currency">Currency</MenuItem>
-                            <MenuItem value="number">Number</MenuItem>
-                            <MenuItem value="date">Date</MenuItem>
-                          </Select>
-                        </FormControl>
-
-                        {col.format?.type === "currency" && (
-                          <>
-                            <TextField
-                              label="Currency Symbol"
-                              size="small"
-                              value={col.format?.currencySymbol || ""}
-                              onChange={(e) =>
-                                updateColumn(
-                                  index,
-                                  "format.currencySymbol",
-                                  e.target.value
-                                )
-                              }
-                              placeholder="$"
-                              fullWidth
-                            />
-                            <TextField
-                              label="Decimals"
-                              type="number"
-                              size="small"
-                              value={col.format?.decimals || 2}
-                              onChange={(e) =>
-                                updateColumn(
-                                  index,
-                                  "format.decimals",
-                                  parseInt(e.target.value)
-                                )
-                              }
-                              fullWidth
-                            />
-                          </>
-                        )}
-
-                        {col.format?.type === "number" && (
-                          <>
-                            <TextField
-                              label="Decimals"
-                              type="number"
-                              size="small"
-                              value={col.format?.decimals || 0}
-                              onChange={(e) =>
-                                updateColumn(
-                                  index,
-                                  "format.decimals",
-                                  parseInt(e.target.value)
-                                )
-                              }
-                              fullWidth
-                            />
-                            <FormControl size="small" fullWidth>
-                              <InputLabel>Thousand Separator</InputLabel>
-                              <Select
-                                value={col.format?.thousandSeparator || false}
-                                onChange={(e) =>
-                                  updateColumn(
-                                    index,
-                                    "format.thousandSeparator",
-                                    e.target.value === "true"
-                                  )
-                                }
-                                label="Thousand Separator"
-                              >
-                                <MenuItem value="true">Yes</MenuItem>
-                                <MenuItem value="false">No</MenuItem>
-                              </Select>
-                            </FormControl>
-                          </>
-                        )}
-
-                        {col.format?.type === "date" && (
-                          <TextField
-                            label="Date Format"
-                            size="small"
-                            value={col.format?.outputFormat || ""}
-                            onChange={(e) =>
-                              updateColumn(
-                                index,
-                                "format.outputFormat",
-                                e.target.value
-                              )
-                            }
-                            placeholder="dd-MMM-yyyy"
-                            fullWidth
-                          />
-                        )}
-
-                        <TextField
-                          label="Width (px)"
-                          type="number"
-                          size="small"
-                          value={col.format?.width || 150}
-                          onChange={(e) =>
-                            updateColumn(
-                              index,
-                              "format.width",
-                              parseInt(e.target.value) || 150
-                            )
-                          }
-                          fullWidth
-                        />
-                      </Box>
-                    )}
-                  </Box>
+                {columns.map((col, index) => (
+                  <ColumnItem
+                    key={col.id}
+                    col={col}
+                    index={index}
+                    isEditing={editingColumn === index}
+                    onToggleEdit={() => setEditingColumn(editingColumn === index ? null : index)}
+                    onRemove={() => handleRemoveColumn(col.id, index)}
+                    onUpdate={(field, value) => handleUpdateColumn(index, field, value)}
+                  />
                 ))}
               </List>
             </Box>
           </AccordionDetails>
         </Accordion>
 
-        {/* Rows Accordion */}
-        <Accordion
-          expanded={expanded === "rows"}
-          onChange={() => setExpanded(expanded === "rows" ? "" : "rows")}
-        >
+        <Accordion expanded={expanded === "rows"} onChange={() => setExpanded(expanded === "rows" ? "" : "rows")}>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
             <ViewAgendaIcon sx={{ mr: 1, fontSize: 20 }} />
-            <Typography variant="body2" fontWeight={500}>
-              Rows ({template.reportData.rows.length})
-            </Typography>
+            <Typography variant="body2" fontWeight={500}>Rows ({rows.length})</Typography>
           </AccordionSummary>
           <AccordionDetails>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 0.5,
-                }}
-              >
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => openAddRowDialog("HEADER")}
-                >
-                  Header
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => openAddRowDialog("DATA")}
-                >
-                  Data
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => openAddRowDialog("SEPARATOR")}
-                >
-                  Separator
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => openAddRowDialog("DYNAMIC")}
-                >
-                  Dynamic
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => openAddRowDialog("FOOTER")}
-                  sx={{ gridColumn: "span 2" }}
-                >
-                  Footer
-                </Button>
+              <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0.5 }}>
+                <Button variant="outlined" size="small" onClick={() => openAddRowDialog("HEADER")}>Header</Button>
+                <Button variant="outlined" size="small" onClick={() => openAddRowDialog("DATA")}>Data</Button>
+                <Button variant="outlined" size="small" onClick={() => openAddRowDialog("SEPARATOR")}>Separator</Button>
+                <Button variant="outlined" size="small" onClick={() => openAddRowDialog("DYNAMIC")}>Dynamic</Button>
+                <Button variant="outlined" size="small" onClick={() => openAddRowDialog("FOOTER")} sx={{ gridColumn: "span 2" }}>Footer</Button>
               </Box>
-              <List
-                dense
-                sx={{ bgcolor: "background.paper", borderRadius: 1, mt: 1 }}
-              >
-                {template.reportData.rows.map((row: any, index: number) => (
-                  <Box key={row.id || index}>
-                    <Box
-                      onDragOver={(e) => handleDragOver(e, index)}
-                      onDrop={handleDragEnd}
-                      sx={{
-                        height: dropTargetIndex === index && draggedRowIndex !== index ? 24 : 4,
-                        bgcolor: dropTargetIndex === index && draggedRowIndex !== index ? "primary.light" : "transparent",
-                        borderRadius: 1,
-                        transition: "all 0.2s",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      {dropTargetIndex === index && draggedRowIndex !== index && (
-                        <Typography variant="caption" color="primary.contrastText">
-                          Drop here
-                        </Typography>
-                      )}
-                    </Box>
-                    <ListItem
-                      draggable
-                      onDragStart={() => handleDragStart(index)}
-                      onDragEnd={handleDragEnd}
-                      sx={{
-                        cursor: "grab",
-                        bgcolor: draggedRowIndex === index ? "action.selected" : "transparent",
-                        borderRadius: 1,
-                        "&:hover": { bgcolor: "action.hover" },
-                      }}
-                      secondaryAction={
-                        <Box sx={{ display: "flex", gap: 0.5 }}>
-                          <IconButton
-                            size="small"
-                            onClick={(e) => handleInsertClick(e, index + 1)}
-                            title="Insert row after"
-                          >
-                            <AddIcon fontSize="small" />
-                          </IconButton>
-                          <IconButton
-                            edge="end"
-                            size="small"
-                            onClick={() => removeRow(row.id, index)}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Box>
-                      }
-                    >
-                      <DragIndicatorIcon
-                        sx={{ mr: 1, color: "text.disabled", cursor: "grab" }}
-                        fontSize="small"
-                      />
-                      <ListItemText
-                        primary={row.id}
-                        secondary={row.rowType}
-                        primaryTypographyProps={{ variant: "body2" }}
-                        secondaryTypographyProps={{
-                          variant: "caption",
-                          color: "primary",
-                        }}
-                      />
-                    </ListItem>
-                  </Box>
+              <List dense sx={{ bgcolor: "background.paper", borderRadius: 1, mt: 1 }}>
+                {rows.map((row, index) => (
+                  <RowItem
+                    key={row.id}
+                    row={row}
+                    index={index}
+                    isDragging={draggedRowIndex === index}
+                    isDropTarget={dropTargetIndex === index}
+                    onDragStart={() => handleDragStart(index)}
+                    onDragOver={(e) => handleDragOver(e, index)}
+                    onDragEnd={handleDragEnd}
+                    onInsertClick={(e) => handleInsertClick(e, index + 1)}
+                    onRemove={() => handleRemoveRow(row.id, index)}
+                  />
                 ))}
                 <Box
-                  onDragOver={(e) => handleDragOver(e, template.reportData.rows.length)}
+                  onDragOver={(e) => handleDragOver(e, rows.length)}
                   onDrop={handleDragEnd}
                   sx={{
-                    height: dropTargetIndex === template.reportData.rows.length ? 24 : 4,
-                    bgcolor: dropTargetIndex === template.reportData.rows.length ? "primary.light" : "transparent",
+                    height: dropTargetIndex === rows.length ? 24 : 4,
+                    bgcolor: dropTargetIndex === rows.length ? "primary.light" : "transparent",
                     borderRadius: 1,
                     transition: "all 0.2s",
                     display: "flex",
@@ -859,10 +671,8 @@ export const LeftPanel = ({ template, onTemplateChange }: LeftPanelProps) => {
                     justifyContent: "center",
                   }}
                 >
-                  {dropTargetIndex === template.reportData.rows.length && (
-                    <Typography variant="caption" color="primary.contrastText">
-                      Drop here
-                    </Typography>
+                  {dropTargetIndex === rows.length && (
+                    <Typography variant="caption" color="primary.contrastText">Drop here</Typography>
                   )}
                 </Box>
               </List>
@@ -870,26 +680,14 @@ export const LeftPanel = ({ template, onTemplateChange }: LeftPanelProps) => {
           </AccordionDetails>
         </Accordion>
 
-        {/* Variants Accordion - Using Dialog */}
-        <Accordion
-          expanded={expanded === "variants"}
-          onChange={() => setExpanded(expanded === "variants" ? "" : "variants")}
-        >
+        <Accordion expanded={expanded === "variants"} onChange={() => setExpanded(expanded === "variants" ? "" : "variants")}>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
             <TuneIcon sx={{ mr: 1, fontSize: 20 }} />
-            <Typography variant="body2" fontWeight={500}>
-              Variants ({variants.length})
-            </Typography>
+            <Typography variant="body2" fontWeight={500}>Variants ({variants.length})</Typography>
           </AccordionSummary>
           <AccordionDetails>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<AddIcon />}
-                onClick={openAddVariantDialog}
-                fullWidth
-              >
+              <Button variant="outlined" size="small" startIcon={<AddIcon />} onClick={openAddVariantDialog} fullWidth>
                 Add Variant
               </Button>
 
@@ -916,12 +714,8 @@ export const LeftPanel = ({ template, onTemplateChange }: LeftPanelProps) => {
                     >
                       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", width: "100%" }}>
                         <Box sx={{ flex: 1 }}>
-                          <Typography variant="body2" fontWeight={600}>
-                            {variant.variantName}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {variant.variantCode}
-                          </Typography>
+                          <Typography variant="body2" fontWeight={600}>{variant.variantName}</Typography>
+                          <Typography variant="caption" color="text.secondary">{variant.variantCode}</Typography>
                           {variant.description && (
                             <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 0.5 }}>
                               {variant.description}
@@ -929,35 +723,17 @@ export const LeftPanel = ({ template, onTemplateChange }: LeftPanelProps) => {
                           )}
                         </Box>
                         <Box sx={{ display: "flex", gap: 0.5 }}>
-                          <IconButton
-                            size="small"
-                            onClick={() => openEditVariantDialog(variant, index)}
-                            title="Edit variant"
-                          >
+                          <IconButton size="small" onClick={() => openEditVariantDialog(variant, index)} title="Edit variant">
                             <EditIcon fontSize="small" />
                           </IconButton>
-                          <IconButton
-                            size="small"
-                            onClick={() => removeVariant(index)}
-                            title="Delete variant"
-                          >
+                          <IconButton size="small" onClick={() => handleRemoveVariant(index)} title="Delete variant">
                             <DeleteIcon fontSize="small" />
                           </IconButton>
                         </Box>
                       </Box>
                       <Box sx={{ display: "flex", gap: 0.5, mt: 1, flexWrap: "wrap" }}>
-                        <Chip
-                          label={`${variant.params.length} params`}
-                          size="small"
-                          variant="outlined"
-                          color="primary"
-                        />
-                        <Chip
-                          label={`${variant.filterRules.length} filters`}
-                          size="small"
-                          variant="outlined"
-                          color="secondary"
-                        />
+                        <Chip label={`${variant.params.length} params`} size="small" variant="outlined" color="primary" />
+                        <Chip label={`${variant.filterRules.length} filters`} size="small" variant="outlined" color="secondary" />
                       </Box>
                     </ListItem>
                   ))}
@@ -968,12 +744,7 @@ export const LeftPanel = ({ template, onTemplateChange }: LeftPanelProps) => {
         </Accordion>
       </Box>
 
-      {/* Insert Row Menu */}
-      <Menu
-        anchorEl={insertMenuAnchor}
-        open={Boolean(insertMenuAnchor)}
-        onClose={() => setInsertMenuAnchor(null)}
-      >
+      <Menu anchorEl={insertMenuAnchor} open={Boolean(insertMenuAnchor)} onClose={() => setInsertMenuAnchor(null)}>
         <MenuItem onClick={() => openAddRowDialog("HEADER", insertAtIndex)}>Header</MenuItem>
         <MenuItem onClick={() => openAddRowDialog("DATA", insertAtIndex)}>Data</MenuItem>
         <MenuItem onClick={() => openAddRowDialog("SEPARATOR", insertAtIndex)}>Separator</MenuItem>
@@ -981,20 +752,18 @@ export const LeftPanel = ({ template, onTemplateChange }: LeftPanelProps) => {
         <MenuItem onClick={() => openAddRowDialog("FOOTER", insertAtIndex)}>Footer</MenuItem>
       </Menu>
 
-      {/* Add Row Dialog */}
       <AddRowDialog
-        open={addRowDialog.open}
-        rowType={addRowDialog.rowType}
+        open={addRowDialogState.open}
+        rowType={addRowDialogState.rowType}
         existingRowIds={existingRowIds}
-        onClose={() => setAddRowDialog({ open: false, rowType: "" })}
-        onConfirm={addRow}
+        onClose={() => setAddRowDialogState({ open: false, rowType: "" })}
+        onConfirm={handleAddRow}
       />
 
-      {/* Variant Dialog */}
       <VariantDialog
         open={variantDialogOpen}
         variant={editingVariant}
-        tableNames={tables}
+        tableNames={tableNames}
         dynamicRowIds={dynamicRowIds}
         onClose={() => {
           setVariantDialogOpen(false);
@@ -1004,7 +773,6 @@ export const LeftPanel = ({ template, onTemplateChange }: LeftPanelProps) => {
         onSave={handleSaveVariant}
       />
 
-      {/* Delete Confirmation Dialog */}
       <Dialog open={!!deleteDialog} onClose={() => setDeleteDialog(null)}>
         <DialogTitle>Confirm Deletion</DialogTitle>
         <DialogContent>
@@ -1015,9 +783,7 @@ export const LeftPanel = ({ template, onTemplateChange }: LeftPanelProps) => {
           </DialogContentText>
           <Box sx={{ mt: 1, maxHeight: 200, overflow: "auto" }}>
             {deleteDialog?.references.map((ref, i) => (
-              <Typography key={i} variant="body2" color="error">
-                • {ref}
-              </Typography>
+              <Typography key={i} variant="body2" color="error">• {ref}</Typography>
             ))}
           </Box>
           <DialogContentText sx={{ mt: 2 }}>
@@ -1029,7 +795,7 @@ export const LeftPanel = ({ template, onTemplateChange }: LeftPanelProps) => {
           <Button
             onClick={() => {
               if (deleteDialog?.type === "row") {
-                confirmRemoveRow(deleteDialog.rowId, deleteDialog.index);
+                confirmRemoveRow(deleteDialog.rowId);
               } else if (deleteDialog?.type === "column") {
                 confirmRemoveColumn(deleteDialog.colId, deleteDialog.index);
               }
@@ -1043,4 +809,6 @@ export const LeftPanel = ({ template, onTemplateChange }: LeftPanelProps) => {
       </Dialog>
     </Paper>
   );
-};
+});
+
+LeftPanel.displayName = "LeftPanel";
