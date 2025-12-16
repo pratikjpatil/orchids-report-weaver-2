@@ -87,31 +87,34 @@ const CellComponent = memo(({
   const colspan = cell.render?.colspan || 1;
   const rowspan = cell.render?.rowspan || 1;
 
-  return (
-    <Box
-      onClick={handleClick}
-      sx={{
-        cursor: formulaMode ? "crosshair" : "pointer",
-        position: "relative",
-        bgcolor: cell.format?.bgColor && cell.format.bgColor !== "#ffffff" 
-          ? cell.format.bgColor 
-          : isSelected 
-            ? "#e3f2fd" 
-            : formulaMode 
-              ? "#fff9c4" 
-              : "white",
-        border: isSelected ? "2px solid #1976d2" : "1px solid #e0e0e0",
-        fontWeight: cell.render?.bold ? 600 : 400,
-        textAlign: cell.render?.align || columnAlign || "left",
-        width: columnWidth * colspan,
-        minWidth: columnWidth * colspan,
-        gridColumn: colspan > 1 ? `span ${colspan}` : undefined,
-        p: 1,
-        "&:hover": {
-          bgcolor: isSelected ? "#e3f2fd" : formulaMode ? "#fff59d" : "#f5f5f5",
-        },
-      }}
-    >
+    return (
+      <Box
+        onClick={handleClick}
+        sx={{
+          cursor: formulaMode ? "crosshair" : "pointer",
+          position: "relative",
+          bgcolor: cell.format?.bgColor && cell.format.bgColor !== "#ffffff" 
+            ? cell.format.bgColor 
+            : isSelected 
+              ? "#e3f2fd" 
+              : formulaMode 
+                ? "#fff9c4" 
+                : "white",
+          border: isSelected ? "2px solid #1976d2" : "1px solid #e0e0e0",
+          boxSizing: "border-box",
+          fontWeight: cell.render?.bold ? 600 : 400,
+          textAlign: cell.render?.align || columnAlign || "left",
+          width: columnWidth * colspan,
+          minWidth: columnWidth * colspan,
+          gridColumn: colspan > 1 ? `span ${colspan}` : undefined,
+          p: 1,
+          zIndex: isSelected ? 10 : 1,
+          "&:hover": {
+            bgcolor: isSelected ? "#e3f2fd" : formulaMode ? "#fff59d" : "#f5f5f5",
+            zIndex: isSelected ? 10 : 2,
+          },
+        }}
+      >
       <Typography variant="body2" sx={{ fontSize: "0.8rem" }}>
         {getCellValue(cell)}
       </Typography>
