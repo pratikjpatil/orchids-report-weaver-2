@@ -155,64 +155,65 @@ interface RowContentProps {
   onDynamicRowClick: (rowId: string) => void;
 }
 
-const RowContent = memo(({ 
-  rowId, 
-  gridTemplateColumns,
-  selectedCellId, 
-  formulaMode, 
-  hiddenCellsMap, 
-  onCellClick, 
-  onDynamicRowClick,
-}: RowContentProps) => {
-  const row = useAppSelector((state) => state.template.rows[rowId]);
-  const columns = useAppSelector(selectColumns);
-
-  const handleDynamicClick = useCallback(() => {
-    onDynamicRowClick(rowId);
-  }, [rowId, onDynamicRowClick]);
-
-  if (!row) return null;
-
-  return (
-    <Box
-      sx={{
-        display: "flex",
-        borderLeft: `3px solid ${getRowTypeColor(row.rowType)}`,
-        "&:hover": { bgcolor: "#f9f9f9" },
-        minHeight: 60,
-      }}
-    >
+  const RowContent = memo(({ 
+    rowId, 
+    gridTemplateColumns,
+    selectedCellId, 
+    formulaMode, 
+    hiddenCellsMap, 
+    onCellClick, 
+    onDynamicRowClick,
+  }: RowContentProps) => {
+    const row = useAppSelector((state) => state.template.rows[rowId]);
+    const columns = useAppSelector(selectColumns);
+  
+    const handleDynamicClick = useCallback(() => {
+      onDynamicRowClick(rowId);
+    }, [rowId, onDynamicRowClick]);
+  
+    if (!row) return null;
+  
+    return (
       <Box
         sx={{
-          bgcolor: "#fafafa",
-          borderRight: "1px solid #e0e0e0",
-          textAlign: "center",
-          width: 80,
-          minWidth: 80,
-          flexShrink: 0,
-          p: 0.5,
           display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
+          borderLeft: `3px solid ${getRowTypeColor(row.rowType)}`,
+          "&:hover": { bgcolor: "#f9f9f9" },
+          minHeight: 60,
         }}
       >
-        <Typography variant="caption" display="block" color="text.secondary" sx={{ fontSize: "0.65rem" }}>
-          {row.id}
-        </Typography>
-        <Chip
-          label={row.rowType}
-          size="small"
+        <Box
           sx={{
-            fontSize: "0.6rem",
-            height: 18,
-            bgcolor: getRowTypeColor(row.rowType),
-            color: "white",
-            fontWeight: 600,
-            mt: 0.5,
+            bgcolor: "#fafafa",
+            borderRight: "1px solid #e0e0e0",
+            textAlign: "center",
+            width: 80,
+            minWidth: 80,
+            flexShrink: 0,
+            p: 0.5,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "flex-start",
+            paddingTop: 1,
           }}
-        />
-      </Box>
+        >
+          <Typography variant="caption" display="block" color="text.secondary" sx={{ fontSize: "0.65rem" }}>
+            {row.id}
+          </Typography>
+          <Chip
+            label={row.rowType}
+            size="small"
+            sx={{
+              fontSize: "0.6rem",
+              height: 18,
+              bgcolor: getRowTypeColor(row.rowType),
+              color: "white",
+              fontWeight: 600,
+              mt: 0.5,
+            }}
+          />
+        </Box>
 
       {row.rowType === "DYNAMIC" ? (
         <Box
