@@ -911,22 +911,6 @@ export const LeftPanel = memo(() => {
 });
 
 LeftPanel.displayName = "LeftPanel";
-"use client";
-
-import { useState, useCallback, memo, useRef } from "react";
-import type React from "react";
-import { useDebouncedInput } from "@/hooks/useDebouncedInput";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import Box from "@mui/material/Box";
-import Paper from "@mui/material/Paper";
-import Typography from "@mui/material/Typography";
-import Accordion from "@mui/material/Accordion";
-import AccordionSummary from "@mui/material/AccordionSummary";
-import AccordionDetails from "@mui/material/AccordionDetails";
-import TextField from "@mui/material/TextField";
-import Button from "@mui/material/Button";
-import IconButton from "@mui/material/IconButton";
-import MuiList from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
 import MenuItem from "@mui/material/MenuItem";
