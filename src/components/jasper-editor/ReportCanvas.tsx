@@ -191,6 +191,7 @@ interface RowContentProps {
   const RowContent = memo(({ 
     rowId, 
     gridTemplateColumns,
+    columnWidths,
     selectedCellId, 
     formulaMode, 
     hiddenCellsMap, 
