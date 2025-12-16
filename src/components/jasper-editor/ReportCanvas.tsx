@@ -279,16 +279,17 @@ interface RowContentProps {
 
 RowContent.displayName = "RowContent";
 
-export const ReportCanvas = memo(() => {
-  const dispatch = useAppDispatch();
-  const parentRef = useRef<HTMLDivElement>(null);
-
-  const rowOrder = useAppSelector(selectRowOrder);
-  const columns = useAppSelector(selectColumns);
-  const selectedCell = useAppSelector(selectSelectedCell);
-  const formulaMode = useAppSelector(selectFormulaMode);
-  const reportMeta = useAppSelector(selectReportMeta);
-  const hiddenCells = useAppSelector(selectHiddenCells);
+  export const ReportCanvas = memo(() => {
+    const dispatch = useAppDispatch();
+    const parentRef = useRef<HTMLDivElement>(null);
+    const headerScrollRef = useRef<HTMLDivElement>(null);
+  
+    const rowOrder = useAppSelector(selectRowOrder);
+    const columns = useAppSelector(selectColumns);
+    const selectedCell = useAppSelector(selectSelectedCell);
+    const formulaMode = useAppSelector(selectFormulaMode);
+    const reportMeta = useAppSelector(selectReportMeta);
+    const hiddenCells = useAppSelector(selectHiddenCells);
 
   const hiddenCellsMap = useMemo(() => {
     const map = new Map<string, boolean>();
