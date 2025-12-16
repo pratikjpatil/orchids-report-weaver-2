@@ -287,17 +287,17 @@ export const RightPanel = memo(() => {
 
           <Divider />
 
-          {cell.type === "TEXT" && (
-            <TextField
-              label="Text Value"
-              size="small"
-              multiline
-              rows={3}
-              value={cell.value || ""}
-              onChange={(e) => handleUpdateCell("value", e.target.value)}
-              fullWidth
-            />
-          )}
+            {cell.type === "TEXT" && (
+              <TextField
+                label="Text Value"
+                size="small"
+                multiline
+                rows={3}
+                value={debouncedTextValue}
+                onChange={(e) => setDebouncedTextValue(e.target.value)}
+                fullWidth
+              />
+            )}
 
           {cell.type === "FORMULA" && (
             <FormulaBuilder
