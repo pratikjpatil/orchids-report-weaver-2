@@ -43,7 +43,7 @@ import {
 
 export const RightPanel = memo(() => {
   const dispatch = useAppDispatch();
-  const { tableConfigs, getSelectableColumns, getAllowedAggFuncs } = useConfig();
+  const { tableConfigs, getSelectableColumns, getAllowedAggFuncs } = useTableConfig();
   
   const selectedCell = useAppSelector(selectSelectedCell);
   const formulaMode = useAppSelector(selectFormulaMode);
