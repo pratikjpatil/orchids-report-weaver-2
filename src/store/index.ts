@@ -2,6 +2,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import { TypedUseSelectorHook, useDispatch, useSelector } from "react-redux";
 import undoable from "redux-undo";
 import templateReducer from "./templateSlice";
+import configReducer from "./configSlice";
 
 const undoableTemplateReducer = undoable(templateReducer, {
   limit: 50,
@@ -29,6 +30,7 @@ const undoableTemplateReducer = undoable(templateReducer, {
 export const store = configureStore({
   reducer: {
     template: undoableTemplateReducer,
+    config: configReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
