@@ -120,9 +120,9 @@ export const FilterBuilder = memo(({
 
   const [uiConditions, setUiConditions] = useState<ConditionUI[]>(parseFiltersToUI);
 
-  useEffect(() => {
-    setUiConditions(parseFiltersToUI());
-  }, [filters, parseFiltersToUI]);
+    useEffect(() => {
+      setUiConditions(parseFiltersToUI());
+    }, [filters, tableName]);
 
   const conditionsToFilters = useCallback((conds: ConditionUI[]): Record<string, FilterCondition[]> => {
     const result: Record<string, FilterCondition[]> = {};
