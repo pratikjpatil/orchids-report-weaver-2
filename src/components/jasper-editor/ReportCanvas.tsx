@@ -304,15 +304,16 @@ interface RowContentProps {
       )}
     </Box>
   );
-}, (prevProps, nextProps) => {
-  return (
-    prevProps.rowId === nextProps.rowId &&
-    prevProps.selectedCellId === nextProps.selectedCellId &&
-    prevProps.formulaMode === nextProps.formulaMode &&
-    prevProps.hiddenCellsMap === nextProps.hiddenCellsMap &&
-    prevProps.gridTemplateColumns === nextProps.gridTemplateColumns
-  );
-});
+  }, (prevProps, nextProps) => {
+    return (
+      prevProps.rowId === nextProps.rowId &&
+      prevProps.selectedCellId === nextProps.selectedCellId &&
+      prevProps.formulaMode === nextProps.formulaMode &&
+      prevProps.hiddenCellsMap === nextProps.hiddenCellsMap &&
+      prevProps.gridTemplateColumns === nextProps.gridTemplateColumns &&
+      prevProps.columnWidths === nextProps.columnWidths
+    );
+  });
 
 RowContent.displayName = "RowContent";
 
