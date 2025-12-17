@@ -354,6 +354,11 @@ RowContent.displayName = "RowContent";
     return () => resizeObserver.disconnect();
   }, []);
 
+  const columnWidthsString = useMemo(() => 
+    columns.map(c => c.format?.width || '').join(','), 
+    [columns]
+  );
+
   const calculateColumnWidths = useMemo(() => {
     if (!containerWidth) return columns.map(() => 150);
     
@@ -369,7 +374,7 @@ RowContent.displayName = "RowContent";
       const colWidth = col.format?.width || 1;
       return Math.floor((colWidth / totalSpecifiedWidth) * containerWidth);
     });
-  }, [columns, containerWidth]);
+  }, [columns, containerWidth, columnWidthsString]);
 
     const gridTemplateColumns = useMemo(
       () => calculateColumnWidths.map(width => `${width}px`).join(" "),
