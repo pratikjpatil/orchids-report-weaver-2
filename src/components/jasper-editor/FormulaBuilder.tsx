@@ -17,7 +17,7 @@ import Alert from "@mui/material/Alert";
 import Autocomplete from "@mui/material/Autocomplete";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
-import { useConfig } from "@/contexts/ConfigContext";
+import { useTableConfig } from "@/hooks/useTableConfig";
 import { FilterBuilder } from "./FilterBuilder";
 
 interface FormulaBuilderProps {
