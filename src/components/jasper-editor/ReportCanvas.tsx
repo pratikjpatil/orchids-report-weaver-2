@@ -354,42 +354,37 @@ RowContent.displayName = "RowContent";
     return () => resizeObserver.disconnect();
   }, []);
 
-  const columnWidthsKey = useMemo(() => 
-    columns.map(c => c.format?.width).join(','), 
-    [columns]
-  );
-
-  const calculateColumnWidths = useMemo(() => {
-    if (!containerWidth || columns.length === 0) return columns.map(() => 150);
-    
-    const hasAnyWidth = columns.some(col => col.format?.width !== undefined);
-    
-    if (!hasAnyWidth) {
-      const equalWidth = Math.floor(containerWidth / columns.length);
-      return columns.map(() => equalWidth);
-    }
-    
-    let totalSpecifiedWidth = 0;
-    let autoColumns = 0;
-    
-    columns.forEach(col => {
-      if (col.format?.width !== undefined && col.format.width > 0) {
-        totalSpecifiedWidth += col.format.width;
-      } else {
-        autoColumns++;
+    const calculateColumnWidths = useMemo(() => {
+      if (!containerWidth || columns.length === 0) return columns.map(() => 150);
+      
+      const hasAnyWidth = columns.some(col => col.format?.width !== undefined && col.format.width > 0);
+      
+      if (!hasAnyWidth) {
+        const equalWidth = Math.floor(containerWidth / columns.length);
+        return columns.map(() => equalWidth);
       }
-    });
-    
-    const remainingWidth = Math.max(0, containerWidth - totalSpecifiedWidth);
-    const autoWidth = autoColumns > 0 ? Math.floor(remainingWidth / autoColumns) : 0;
-    
-    return columns.map(col => {
-      if (col.format?.width !== undefined && col.format.width > 0) {
-        return col.format.width;
-      }
-      return autoWidth;
-    });
-  }, [columns, containerWidth, columnWidthsKey]);
+      
+      let totalSpecifiedWidth = 0;
+      let autoColumns = 0;
+      
+      columns.forEach(col => {
+        if (col.format?.width !== undefined && col.format.width > 0) {
+          totalSpecifiedWidth += col.format.width;
+        } else {
+          autoColumns++;
+        }
+      });
+      
+      const remainingWidth = Math.max(0, containerWidth - totalSpecifiedWidth);
+      const autoWidth = autoColumns > 0 ? Math.floor(remainingWidth / autoColumns) : 0;
+      
+      return columns.map(col => {
+        if (col.format?.width !== undefined && col.format.width > 0) {
+          return col.format.width;
+        }
+        return autoWidth > 0 ? autoWidth : 150;
+      });
+    }, [columns, containerWidth]);
 
     const gridTemplateColumns = useMemo(
       () => calculateColumnWidths.map(width => `${width}px`).join(" "),
