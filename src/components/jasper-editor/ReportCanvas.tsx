@@ -354,27 +354,42 @@ RowContent.displayName = "RowContent";
     return () => resizeObserver.disconnect();
   }, []);
 
-  const columnWidthsString = useMemo(() => 
-    columns.map(c => c.format?.width || '').join(','), 
+  const columnWidthsKey = useMemo(() => 
+    columns.map(c => c.format?.width).join(','), 
     [columns]
   );
 
   const calculateColumnWidths = useMemo(() => {
-    if (!containerWidth) return columns.map(() => 150);
+    if (!containerWidth || columns.length === 0) return columns.map(() => 150);
     
-    const hasAnyWidth = columns.some(col => col.format?.width);
+    const hasAnyWidth = columns.some(col => col.format?.width !== undefined);
     
     if (!hasAnyWidth) {
       const equalWidth = Math.floor(containerWidth / columns.length);
       return columns.map(() => equalWidth);
     }
     
-    const totalSpecifiedWidth = columns.reduce((sum, col) => sum + (col.format?.width || 1), 0);
-    return columns.map(col => {
-      const colWidth = col.format?.width || 1;
-      return Math.floor((colWidth / totalSpecifiedWidth) * containerWidth);
+    let totalSpecifiedWidth = 0;
+    let autoColumns = 0;
+    
+    columns.forEach(col => {
+      if (col.format?.width !== undefined && col.format.width > 0) {
+        totalSpecifiedWidth += col.format.width;
+      } else {
+        autoColumns++;
+      }
     });
-  }, [columns, containerWidth, columnWidthsString]);
+    
+    const remainingWidth = Math.max(0, containerWidth - totalSpecifiedWidth);
+    const autoWidth = autoColumns > 0 ? Math.floor(remainingWidth / autoColumns) : 0;
+    
+    return columns.map(col => {
+      if (col.format?.width !== undefined && col.format.width > 0) {
+        return col.format.width;
+      }
+      return autoWidth;
+    });
+  }, [columns, containerWidth, columnWidthsKey]);
 
     const gridTemplateColumns = useMemo(
       () => calculateColumnWidths.map(width => `${width}px`).join(" "),
@@ -563,29 +578,29 @@ RowContent.displayName = "RowContent";
                       overflowX: "hidden",
                       overflowY: "hidden",
                     }}
-                  >
-                    <Box
-                      sx={{
-                        display: "grid",
-                        gridTemplateColumns,
-                      }}
                     >
-                      {columns.map((col) => (
-                        <Box
-                          key={col.id}
-                          sx={{
-                            fontWeight: 600,
-                            fontSize: "0.8rem",
-                            p: 1,
-                            borderRight: "1px solid #e0e0e0",
-                          }}
-                        >
-                          {col.name}
-                          <Typography variant="caption" display="block" color="text.secondary" sx={{ fontSize: "0.65rem" }}>
-                            {col.id} ({col.format?.width || 150}px)
-                          </Typography>
-                        </Box>
-                      ))}
+                      <Box
+                        sx={{
+                          display: "grid",
+                          gridTemplateColumns,
+                        }}
+                      >
+                        {columns.map((col, index) => (
+                          <Box
+                            key={col.id}
+                            sx={{
+                              fontWeight: 600,
+                              fontSize: "0.8rem",
+                              p: 1,
+                              borderRight: "1px solid #e0e0e0",
+                            }}
+                          >
+                            {col.name}
+                            <Typography variant="caption" display="block" color="text.secondary" sx={{ fontSize: "0.65rem" }}>
+                              {col.id} ({col.format?.width !== undefined ? `${col.format.width}px` : `${calculateColumnWidths[index]}px (Auto)`})
+                            </Typography>
+                          </Box>
+                        ))}
                     </Box>
                   </Box>
                 </Box>
