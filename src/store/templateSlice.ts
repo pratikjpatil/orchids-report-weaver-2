@@ -244,12 +244,15 @@ const templateSlice = createSlice({
       }
     },
 
-    updateColumnFormat: (state, action: PayloadAction<{ index: number; format: Partial<ColumnFormat> }>) => {
-      const { index, format } = action.payload;
-      if (state.columns[index]) {
-        state.columns[index].format = { ...state.columns[index].format, ...format };
-      }
-    },
+  updateColumnFormat: (state, action: PayloadAction<{ index: number; format: Partial<ColumnFormat> }>) => {
+    const { index, format } = action.payload;
+    if (state.columns[index]) {
+      state.columns[index] = {
+        ...state.columns[index],
+        format: { ...state.columns[index].format, ...format }
+      };
+    }
+  },
 
     removeColumn: (state, action: PayloadAction<{ colId: string; index: number }>) => {
       const { colId, index } = action.payload;
