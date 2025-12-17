@@ -122,15 +122,13 @@ export const FilterBuilder = memo(({
   }, [onFiltersChange, conditionsToFilters]);
 
   const addCondition = useCallback(() => {
-    const column = availableColumns[0] || "";
-    const dataType = tableName ? getColumnDataType(tableName, column) : null;
     const newCondition: ConditionUI = {
-      column,
+      column: availableColumns[0] || "",
       conditionIndex: 0,
-      condition: { op: "=", value: "", dataType: dataType || undefined },
+      condition: { op: "=", value: "" },
     };
     updateConditions([...uiConditions, newCondition]);
-  }, [availableColumns, tableName, getColumnDataType, uiConditions, updateConditions]);
+  }, [availableColumns, uiConditions, updateConditions]);
 
   const removeCondition = useCallback((index: number) => {
     updateConditions(uiConditions.filter((_, i) => i !== index));
@@ -140,15 +138,7 @@ export const FilterBuilder = memo(({
     const newConditions = [...uiConditions];
     
     if (field === "column") {
-      const dataType = tableName ? getColumnDataType(tableName, value) : null;
-      newConditions[index] = { 
-        ...newConditions[index], 
-        column: value,
-        condition: {
-          ...newConditions[index].condition,
-          dataType: dataType || undefined,
-        },
-      };
+      newConditions[index] = { ...newConditions[index], column: value };
     } else if (field === "op") {
       const newOp = value;
       let newValue = newConditions[index].condition.value;
@@ -163,11 +153,7 @@ export const FilterBuilder = memo(({
       
       newConditions[index] = {
         ...newConditions[index],
-        condition: { 
-          op: newOp, 
-          value: newValue,
-          dataType: newConditions[index].condition.dataType,
-        },
+        condition: { op: newOp, value: newValue },
       };
     } else if (field === "value") {
       newConditions[index] = {
@@ -177,7 +163,7 @@ export const FilterBuilder = memo(({
     }
 
     updateConditions(newConditions);
-  }, [uiConditions, tableName, getColumnDataType, updateConditions]);
+  }, [uiConditions, updateConditions]);
 
   const addInValue = useCallback((index: number, val: string) => {
     if (!val.trim()) return;
@@ -187,10 +173,7 @@ export const FilterBuilder = memo(({
       : [];
     newConditions[index] = {
       ...newConditions[index],
-      condition: { 
-        ...newConditions[index].condition, 
-        value: [...currentValues, val.trim()],
-      },
+      condition: { ...newConditions[index].condition, value: [...currentValues, val.trim()] },
     };
     updateConditions(newConditions);
     setNewInValue("");
@@ -220,32 +203,32 @@ export const FilterBuilder = memo(({
     return acc;
   }, {} as Record<string, (ConditionUI & { originalIndex: number })[]>);
 
-    return (
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Typography variant="caption" fontWeight={600} color="text.secondary">
-            {title}
+  return (
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <Typography variant="caption" fontWeight={600} color="text.secondary">
+          FILTER CONDITIONS
+        </Typography>
+        <Button
+          size="small"
+          startIcon={<AddIcon />}
+          onClick={addCondition}
+          variant="outlined"
+          disabled={!tableName}
+        >
+          Add Condition
+        </Button>
+      </Box>
+
+      {!tableName && (
+        <Paper variant="outlined" sx={{ p: 2, textAlign: "center", bgcolor: "#fff3e0" }}>
+          <Typography variant="body2" color="warning.dark">
+            Please select a table first to add filter conditions.
           </Typography>
-          <Button
-            size="small"
-            startIcon={<AddIcon />}
-            onClick={addCondition}
-            variant="outlined"
-            disabled={availableColumns.length === 0}
-          >
-            Add Condition
-          </Button>
-        </Box>
+        </Paper>
+      )}
 
-        {availableColumns.length === 0 && (
-          <Paper variant="outlined" sx={{ p: 2, textAlign: "center", bgcolor: "#fff3e0" }}>
-            <Typography variant="body2" color="warning.dark">
-              {customColumns ? "No columns available for filtering." : "Please select a table first to add filter conditions."}
-            </Typography>
-          </Paper>
-        )}
-
-        {availableColumns.length > 0 && uiConditions.length === 0 && (
+      {tableName && uiConditions.length === 0 && (
         <Paper variant="outlined" sx={{ p: 2, textAlign: "center", bgcolor: "#f5f5f5" }}>
           <Typography variant="body2" color="text.secondary">
             No filter conditions. Click "Add Condition" to add filters.
