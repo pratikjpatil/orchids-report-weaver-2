@@ -26,6 +26,7 @@ export interface CellSource {
 export interface FilterCondition {
   op: string;
   value: string | string[] | null;
+  dataType?: string;
 }
 
 export interface Cell {
