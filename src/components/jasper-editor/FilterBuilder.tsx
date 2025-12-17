@@ -13,7 +13,7 @@ import Paper from "@mui/material/Paper";
 import Autocomplete from "@mui/material/Autocomplete";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
-import { useConfig } from "@/contexts/ConfigContext";
+import { useTableConfig } from "@/hooks/useTableConfig";
 
 interface FilterCondition {
   op: string;
