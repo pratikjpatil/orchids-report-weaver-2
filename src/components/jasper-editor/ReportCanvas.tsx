@@ -336,23 +336,40 @@ RowContent.displayName = "RowContent";
     return map;
   }, [hiddenCells]);
 
-    const calculateColumnWidths = useMemo(() => {
-      if (!parentRef.current) return columns.map(() => 150);
-      
-      const containerWidth = parentRef.current.clientWidth - 80;
-      const hasAnyWidth = columns.some(col => col.format?.width);
-      
-      if (!hasAnyWidth) {
-        const equalWidth = Math.floor(containerWidth / columns.length);
-        return columns.map(() => equalWidth);
+  const [containerWidth, setContainerWidth] = useState(0);
+
+  useEffect(() => {
+    if (!parentRef.current) return;
+    
+    const updateWidth = () => {
+      if (parentRef.current) {
+        setContainerWidth(parentRef.current.clientWidth - 80);
       }
-      
-      const totalSpecifiedWidth = columns.reduce((sum, col) => sum + (col.format?.width || 1), 0);
-      return columns.map(col => {
-        const colWidth = col.format?.width || 1;
-        return Math.floor((colWidth / totalSpecifiedWidth) * containerWidth);
-      });
-    }, [columns]);
+    };
+    
+    updateWidth();
+    const resizeObserver = new ResizeObserver(updateWidth);
+    resizeObserver.observe(parentRef.current);
+    
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  const calculateColumnWidths = useMemo(() => {
+    if (!containerWidth) return columns.map(() => 150);
+    
+    const hasAnyWidth = columns.some(col => col.format?.width);
+    
+    if (!hasAnyWidth) {
+      const equalWidth = Math.floor(containerWidth / columns.length);
+      return columns.map(() => equalWidth);
+    }
+    
+    const totalSpecifiedWidth = columns.reduce((sum, col) => sum + (col.format?.width || 1), 0);
+    return columns.map(col => {
+      const colWidth = col.format?.width || 1;
+      return Math.floor((colWidth / totalSpecifiedWidth) * containerWidth);
+    });
+  }, [columns, containerWidth]);
 
     const gridTemplateColumns = useMemo(
       () => calculateColumnWidths.map(width => `${width}px`).join(" "),
