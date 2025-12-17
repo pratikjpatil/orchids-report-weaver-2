@@ -626,6 +626,6 @@ RowContent.displayName = "RowContent";
       </Paper>
     </Box>
   );
-  });
-  
-    ReportCanvas.displayName = "ReportCanvas";
+});
+
+ReportCanvas.displayName = "ReportCanvas";
