@@ -57,9 +57,8 @@ export const ImportTemplateDialog = ({
         return;
       }
 
-      // Handle both formats: { template: {...}, variants: [...] } or direct template object
-      let template = data.template || data;
-      let variants = data.variants || [];
+        const template = data.template || data;
+        const variants = data.variants || [];
 
       // Validate template structure
       if (!template.templateMeta || !template.reportMeta || !template.reportData) {
