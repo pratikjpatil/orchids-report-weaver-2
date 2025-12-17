@@ -65,23 +65,40 @@ export const FilterBuilder = memo(({
     const conditions: ConditionUI[] = [];
 
     Object.entries(filters || {}).forEach(([column, columnConditions]) => {
+      const dataType = tableName ? getColumnDataType(tableName, column) : undefined;
+      
       if (Array.isArray(columnConditions)) {
         columnConditions.forEach((condition, index) => {
-          conditions.push({ column, conditionIndex: index, condition });
+          conditions.push({ 
+            column, 
+            conditionIndex: index, 
+            condition: {
+              ...condition,
+              dataType: condition.dataType || dataType
+            }
+          });
         });
       } else if (typeof columnConditions === "object" && columnConditions !== null) {
         if (columnConditions.op !== undefined) {
           conditions.push({
             column,
             conditionIndex: 0,
-            condition: { op: columnConditions.op, value: columnConditions.value },
+            condition: { 
+              op: columnConditions.op, 
+              value: columnConditions.value,
+              dataType: columnConditions.dataType || dataType
+            },
           });
         } else {
           Object.entries(columnConditions).forEach(([op, val], index) => {
             conditions.push({
               column,
               conditionIndex: index,
-              condition: { op, value: val as string | string[] | null },
+              condition: { 
+                op, 
+                value: val as string | string[] | null,
+                dataType
+              },
             });
           });
         }
@@ -89,13 +106,17 @@ export const FilterBuilder = memo(({
         conditions.push({
           column,
           conditionIndex: 0,
-          condition: { op: "=", value: columnConditions as string },
+          condition: { 
+            op: "=", 
+            value: columnConditions as string,
+            dataType
+          },
         });
       }
     });
 
     return conditions;
-  }, [filters]);
+  }, [filters, tableName, getColumnDataType]);
 
   const [uiConditions, setUiConditions] = useState<ConditionUI[]>(parseFiltersToUI);
 
