@@ -29,12 +29,12 @@ if (typeof window !== "undefined") {
   });
 
   window.addEventListener("unhandledrejection", (event) => {
-    const reason: any = event.reason;
+    const reason = event.reason as Error | string | unknown;
     const message =
-      typeof reason === "object" && reason?.message
-        ? String(reason.message)
+      typeof reason === "object" && reason !== null && "message" in reason
+        ? String((reason as Error).message)
         : String(reason);
-    const stack = typeof reason === "object" ? reason?.stack : undefined;
+    const stack = typeof reason === "object" && reason !== null && "stack" in reason ? (reason as Error).stack : undefined;
 
     sendToParent({
       type: "ERROR_CAPTURED",
