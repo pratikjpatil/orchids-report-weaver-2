@@ -187,7 +187,10 @@ export const FilterBuilder = memo(({
       : [];
     newConditions[index] = {
       ...newConditions[index],
-      condition: { ...newConditions[index].condition, value: [...currentValues, val.trim()] },
+      condition: { 
+        ...newConditions[index].condition, 
+        value: [...currentValues, val.trim()],
+      },
     };
     updateConditions(newConditions);
     setNewInValue("");
