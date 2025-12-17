@@ -121,14 +121,16 @@ export const FilterBuilder = memo(({
     onFiltersChange(conditionsToFilters(newConditions));
   }, [onFiltersChange, conditionsToFilters]);
 
-  const addCondition = useCallback(() => {
-    const newCondition: ConditionUI = {
-      column: availableColumns[0] || "",
-      conditionIndex: 0,
-      condition: { op: "=", value: "" },
-    };
-    updateConditions([...uiConditions, newCondition]);
-  }, [availableColumns, uiConditions, updateConditions]);
+    const addCondition = useCallback(() => {
+      const firstColumn = availableColumns[0] || "";
+      const dataType = tableName && firstColumn ? getColumnDataType(tableName, firstColumn) : undefined;
+      const newCondition: ConditionUI = {
+        column: firstColumn,
+        conditionIndex: 0,
+        condition: { op: "=", value: "", dataType },
+      };
+      updateConditions([...uiConditions, newCondition]);
+    }, [availableColumns, uiConditions, updateConditions, tableName, getColumnDataType]);
 
   const removeCondition = useCallback((index: number) => {
     updateConditions(uiConditions.filter((_, i) => i !== index));
