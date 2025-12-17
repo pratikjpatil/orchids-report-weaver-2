@@ -95,10 +95,8 @@ interface CellComponentProps {
     onCellClick(rowId, cellId, colId);
   }, [rowId, cellId, colId, onCellClick]);
   
-  if (isHidden || !cell) return null;
-
-  const colspan = cell.render?.colspan || 1;
-  const rowspan = cell.render?.rowspan || 1;
+  const colspan = cell?.render?.colspan || 1;
+  const rowspan = cell?.render?.rowspan || 1;
   
   const cellWidth = useMemo(() => {
     let totalWidth = 0;
@@ -107,6 +105,8 @@ interface CellComponentProps {
     }
     return totalWidth;
   }, [colspan, cellIndex, columnWidths]);
+
+  if (isHidden || !cell) return null;
 
       return (
         <Box

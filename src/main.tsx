@@ -10,7 +10,9 @@ if (typeof window !== "undefined") {
       if (window.parent && window.parent !== window) {
         window.parent.postMessage(data, "*");
       }
-    } catch {}
+    } catch {
+      // Ignore postMessage errors
+    }
   };
 
   window.addEventListener("error", (event) => {

@@ -155,7 +155,9 @@ export const RowEditor = ({ row, columns, onChange }: RowEditorProps) => {
                         onChange={(e) => {
                           try {
                             updateCell(index, "source.filters", JSON.parse(e.target.value));
-                          } catch {}
+                          } catch {
+                            // Ignore invalid JSON
+                          }
                         }}
                         placeholder='{"BRANCH_CODE": "10089"}'
                         className="font-mono text-xs"
@@ -181,7 +183,9 @@ export const RowEditor = ({ row, columns, onChange }: RowEditorProps) => {
                         onChange={(e) => {
                           try {
                             updateCell(index, "variables", JSON.parse(e.target.value));
-                          } catch {}
+                          } catch {
+                            // Ignore invalid JSON
+                          }
                         }}
                         placeholder='{"maxBal": {"type": "DB_MAX", "table": "GL_BALANCE", "column": "BALANCE"}}'
                         className="font-mono text-xs"
@@ -459,7 +463,9 @@ export const RowEditor = ({ row, columns, onChange }: RowEditorProps) => {
                         onChange={(e) => {
                           try {
                             updateCell(index, "source.filters", JSON.parse(e.target.value));
-                          } catch {}
+                          } catch {
+                            // Ignore invalid JSON
+                          }
                         }}
                         placeholder='{"BRANCH_CODE": "10089"}'
                         className="font-mono text-xs"
