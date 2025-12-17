@@ -183,6 +183,7 @@ CellComponent.displayName = "CellComponent";
 interface RowContentProps {
   rowId: string;
   gridTemplateColumns: string;
+  columnWidths: number[];
   selectedCellId: string | null;
   formulaMode: boolean;
   hiddenCellsMap: Map<string, boolean>;
