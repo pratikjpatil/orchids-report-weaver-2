@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import Box from "@mui/material/Box";
@@ -7,7 +7,6 @@ import { TopToolbar } from "@/components/jasper-editor/TopToolbar";
 import { LeftPanel } from "@/components/jasper-editor/LeftPanel";
 import { RightPanel } from "@/components/jasper-editor/RightPanel";
 import { ImportTemplateDialog } from "@/components/jasper-editor/ImportTemplateDialog";
-import { ConfigProvider } from "@/contexts/ConfigContext";
 import { useToast } from "@/hooks/use-toast";
 import { saveTemplate, saveVariants } from "@/services/api";
 import { useAppDispatch, useAppSelector } from "@/store";
@@ -19,6 +18,7 @@ import {
   setSaving,
   setTemplateSaved,
 } from "@/store/templateSlice";
+import { loadTableConfigs } from "@/store/configSlice";
 import {
   selectTemplateMeta,
   selectReportMeta,
