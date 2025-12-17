@@ -150,18 +150,16 @@ export const RowEditor = ({ row, columns, onChange }: RowEditorProps) => {
                     </div>
                     <div className="space-y-2">
                       <Label>Filters (JSON)</Label>
-                        <Textarea
-                          value={JSON.stringify(cell.source?.filters || {}, null, 2)}
-                          onChange={(e) => {
-                            try {
-                              updateCell(index, "source.filters", JSON.parse(e.target.value));
-                            } catch (error) {
-                              console.error("Invalid JSON:", error);
-                            }
-                          }}
-                          placeholder='{"BRANCH_CODE": "10089"}'
-                          className="font-mono text-xs"
-                        />
+                      <Textarea
+                        value={JSON.stringify(cell.source?.filters || {}, null, 2)}
+                        onChange={(e) => {
+                          try {
+                            updateCell(index, "source.filters", JSON.parse(e.target.value));
+                          } catch {}
+                        }}
+                        placeholder='{"BRANCH_CODE": "10089"}'
+                        className="font-mono text-xs"
+                      />
                     </div>
                   </div>
                 )}
@@ -178,18 +176,16 @@ export const RowEditor = ({ row, columns, onChange }: RowEditorProps) => {
                     </div>
                     <div className="space-y-2">
                       <Label>Variables (JSON)</Label>
-                        <Textarea
-                          value={JSON.stringify(cell.variables || {}, null, 2)}
-                          onChange={(e) => {
-                            try {
-                              updateCell(index, "variables", JSON.parse(e.target.value));
-                            } catch (error) {
-                              console.error("Invalid JSON:", error);
-                            }
-                          }}
-                          placeholder='{"maxBal": {"type": "DB_MAX", "table": "GL_BALANCE", "column": "BALANCE"}}'
-                          className="font-mono text-xs"
-                        />
+                      <Textarea
+                        value={JSON.stringify(cell.variables || {}, null, 2)}
+                        onChange={(e) => {
+                          try {
+                            updateCell(index, "variables", JSON.parse(e.target.value));
+                          } catch {}
+                        }}
+                        placeholder='{"maxBal": {"type": "DB_MAX", "table": "GL_BALANCE", "column": "BALANCE"}}'
+                        className="font-mono text-xs"
+                      />
                     </div>
                   </div>
                 )}
