@@ -910,4 +910,4 @@ export const LeftPanel = memo(() => {
   );
 });
 
-  LeftPanel.displayName = "LeftPanel";
+LeftPanel.displayName = "LeftPanel";
