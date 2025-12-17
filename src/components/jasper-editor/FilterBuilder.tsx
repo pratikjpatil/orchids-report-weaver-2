@@ -56,7 +56,7 @@ export const FilterBuilder = memo(({
   title = "FILTER CONDITIONS",
   availableColumns: customColumns,
 }: FilterBuilderProps) => {
-  const { getFilterableColumns, getColumnDataType } = useConfig();
+  const { getFilterableColumns, getColumnDataType } = useTableConfig();
   const [newInValue, setNewInValue] = useState<string>("");
 
   const availableColumns = customColumns || (tableName ? getFilterableColumns(tableName) : []);
