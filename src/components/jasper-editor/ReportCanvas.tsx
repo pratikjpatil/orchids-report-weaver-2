@@ -600,7 +600,7 @@ RowContent.displayName = "RowContent";
                           >
                             {col.name}
                             <Typography variant="caption" display="block" color="text.secondary" sx={{ fontSize: "0.65rem" }}>
-                              {col.id} ({col.format?.width !== undefined ? `${col.format.width}px` : `${calculateColumnWidths[index]}px (Auto)`})
+                              {col.id} ({col.format?.width !== undefined && col.format.width > 0 ? `${col.format.width}px` : `${calculateColumnWidths[index]}px (Auto)`})
                             </Typography>
                           </Box>
                         ))}
