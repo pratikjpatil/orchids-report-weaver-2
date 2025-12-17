@@ -14,7 +14,7 @@ import AccordionDetails from "@mui/material/AccordionDetails";
 import Chip from "@mui/material/Chip";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { FilterBuilder } from "./FilterBuilder";
-import { useConfig } from "@/contexts/ConfigContext";
+import { useTableConfig } from "@/hooks/useTableConfig";
 
 interface ColumnMapping {
   templateColumnId: string;
