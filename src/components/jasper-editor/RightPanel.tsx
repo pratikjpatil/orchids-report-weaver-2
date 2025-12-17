@@ -113,12 +113,12 @@ export const RightPanel = memo(() => {
   }, [dispatch]);
 
   const handleDynamicConfigChange = useCallback((config: any) => {
-    if (!selectedCell || !row) return;
+    if (!selectedCell) return;
     dispatch(updateDynamicConfig({
       rowId: selectedCell.rowId,
       config,
     }));
-  }, [dispatch, selectedCell?.rowId, row]);
+  }, [dispatch, selectedCell?.rowId]);
 
   useEffect(() => {
     setCellTypeWarning(null);
