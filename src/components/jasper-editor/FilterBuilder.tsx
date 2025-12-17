@@ -377,8 +377,8 @@ export const FilterBuilder = memo(({
           </Box>
         </Paper>
       )}
-    </Box>
-  );
-  });
-  
-  FilterBuilder.displayName = "FilterBuilder";
+      </Box>
+    );
+});
+
+FilterBuilder.displayName = "FilterBuilder";
